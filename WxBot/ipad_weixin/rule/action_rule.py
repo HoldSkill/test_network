@@ -7,7 +7,7 @@ django.setup()
 
 from django.utils.encoding import iri_to_uri
 
-from ipad_weixin.models import Qrcode, ChatRoom, ChatroomMember, WxUser
+from ipad_weixin.models import Qrcode, ChatRoom, ChatroomMember, WxUser, PlatformInformation
 from django.contrib.auth.models import User
 
 # from broadcast.models.user_models import Adzone
@@ -56,8 +56,9 @@ def filter_keyword_rule(wx_id, msg_dict):
                     "keyword": keyword,
                     "platform_id": platform_id
                 }
-                response = requests.post("http://localhost:8000/product/search_product/",
-                                         data=json.dumps(request_data))
+                # 该平台所对应处理搜索View的url  http://localhost:8000/product/search_product/
+                host_url = PlatformInformation.objects.get(platform_id=platform_id, is_customer_server=False).host_url
+                response = requests.post(host_url, data=json.dumps(request_data))
                 response_dict = json.loads(response.content)
                 data = response_dict["data"]
 

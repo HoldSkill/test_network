@@ -139,6 +139,10 @@ class WxUser(models.Model):
     def __unicode__(self):
         return self.nickname
 
+    class Meta:
+        verbose_name = u"微信用户"
+        verbose_name_plural = verbose_name
+
 
 class Contact(models.Model):
 
@@ -233,7 +237,8 @@ class ChatRoom(models.Model):
         return self.nickname
 
     class Meta:
-        verbose_name = "chatroom"
+        verbose_name = "微信群"
+        verbose_name_plural = verbose_name
 
 
 class ChatroomMember(models.Model):
@@ -295,6 +300,10 @@ class SignInRule(models.Model):
         self.red_packet_id = "J43lMyyodSXCal0QMer7"
         self.save()
 
+    class Meta:
+        verbose_name = u"签到规则"
+        verbose_name_plural = verbose_name
+
 
 class PushRecord(models.Model):
     wx_user = models.ForeignKey(WxUser)
@@ -302,6 +311,13 @@ class PushRecord(models.Model):
     img_url = models.URLField()
     text = models.TextField()
     created = models.DateTimeField(auto_now=True)
+
+
+class PlatformInformation(models.Model):
+    platform_id = models.CharField(max_length=50)
+    host_url = models.URLField()
+    red_packet_id = models.CharField(max_length=100)
+    is_customer_server = models.BooleanField(default=False)
 
 
 

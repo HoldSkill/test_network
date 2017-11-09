@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 
 from ipad_weixin.weixin_bot import WXBot
-from ipad_weixin.models import Qrcode, WxUser, ChatRoom, SignInRule, PushRecord
+from ipad_weixin.models import Qrcode, WxUser, ChatRoom, SignInRule, PushRecord, PlatformInformation
 from ipad_weixin.heartbeat_manager import HeartBeatManager
 from ipad_weixin.send_msg_type import sendMsg
 
@@ -51,7 +51,25 @@ class PlatformUserList(View):
         login_user_db = User.objects.filter(wxuser__login=1, wxuser__is_customer_server=False, first_name=platform_id)
         if not login_user_db:
             return HttpResponse(json.dumps({"ret": 0, "Error": "筛选{}平台User为空".format(platform_id)}))
-        login_user_list = list(set(login_user.username for login_user in login_user_db))
+
+        # 这里是否应该再去遍历一层， 拿到该用户的nickname呢？
+
+        login_user_list = []
+        for login_user in login_user_db:
+            username = login_user.username
+            wxuser_db = WxUser.objects.filter(user__username=username, login=1, is_customer_server=False)
+            wxuser_nickname_list = [wxuser.nickname for wxuser in wxuser_db]
+            data = {"user": username, "wxuser_list": wxuser_nickname_list}
+            login_user_list.append(data)
+        # login_user_list = list(set(login_user.username for login_user in login_user_db))
+        """
+        {
+            "login_user_list":[
+                    {"user": "smart", "wxuser_list": ["樂阳", "渺渺的"]}，
+                    {"user": "keyerror", ......}
+            ]
+        }
+        """
         return HttpResponse(json.dumps({"ret": 1, "login_user_list": login_user_list}))
 
 
@@ -62,9 +80,11 @@ class AddProductionChatroom(View):
         数据类型：josn
         格式：
         {
-            "md_username":
-            "chatroom": ["chatroom.username",......]
+            "md_username": "smart"
+            "chatroom_list": ["chatroom.username",......]
         }
+        接口: http://s-prod-04.qunzhu666.com:10024/robot/add_production_chatroom/
+        本地: localhost:10024/robot/add_production_chatroom/
         """
         req_dict = json.loads(request.body)
         chatroom_list = req_dict["chatroom_list"]
@@ -80,6 +100,10 @@ class AddProductionChatroom(View):
 class RemoveProductionChatroom(View):
     @csrf_exempt
     def post(self, request):
+        """
+        接口: http://s-prod-04.qunzhu666.com:10024/robot/add_production_chatroom
+        本地: localhost:10024/robot/remove_production_chatroom/
+        """
         req_dict = json.loads(request.body)
         chatroom_list = req_dict["chatroom_list"]
         if not chatroom_list:
@@ -94,17 +118,21 @@ class RemoveProductionChatroom(View):
 
 class DefineSignRule(View):
     """
-    接口： http://s-prod-04.qunzhu666.com:8080/define_sign_rule
+    接口： http://s-prod-04.qunzhu666.com:8080/robot/define_sign_rule
+    本地： localhost:10024/robot/define_sign_rule/
     """
     @csrf_exempt
     def post(self, request):
         req_dict = json.loads(request.body)
         keyword = req_dict['keyword']
         md_username = req_dict['md_username']
-        # 目前web接口只提供 “福利社” 的红包id
-        red_packet_id = 'J43lMyyodSXCal0QMer7'
+        platform_id = req_dict['platform_id']
+
+        red_packet_id = PlatformInformation.objects.get(platform_id=platform_id, is_customer_server=False).red_packet_id
         wx_user = WxUser.objects.filter(user__username=md_username).first()
-        chatroom_list = ChatRoom.objects.filter(wx_user__username=wx_user.username, username__icontains=u"果粉街")
+
+        # 只有在发单群才能够添加签到规则
+        chatroom_list = ChatRoom.objects.filter(wx_user__username=wx_user.username, is_send=True)
         if not chatroom_list:
             return HttpResponse(json.dumps({"ret": 0, "reason": "发单群为空"}))
         sign_rule = SignInRule()

@@ -18,24 +18,29 @@ from django.contrib import admin
 
 from ipad_weixin.views.base_views import GetQrcode, HostList, IsUuidLogin, IsLogin, \
      AddSuperUser, ResetSingleHeartBeat, ResetHeartBeat
-from ipad_weixin.views.function_views import SendMsgView, PlatformUserList
-
+from ipad_weixin.views.function_views import SendMsgView, PlatformUserList, AddProductionChatroom, \
+    RemoveProductionChatroom, DefineSignRule
+import xadmin
 robot_urls = [
-    url(r'getqrcode/$', GetQrcode.as_view()),
-    url(r'host_list/', HostList.as_view()),
-    url(r'is_login/', IsLogin.as_view()),
-    url(r'is_uuid_login/', IsUuidLogin.as_view()),
+    url(r'getqrcode', GetQrcode.as_view()),
+    url(r'host_list', HostList.as_view()),
+    url(r'is_login', IsLogin.as_view()),
+    url(r'is_uuid_login', IsUuidLogin.as_view()),
     url(r'add_super_user', AddSuperUser.as_view()),
 
     url(r'reset_heart_beat', ResetHeartBeat.as_view()),
     url(r'reset_single', ResetSingleHeartBeat.as_view()),
 
+    url(r'define_sign_rule', DefineSignRule.as_view()),
+
     url(r'send_msg', SendMsgView.as_view()),
-    url(r'platform_user_list', PlatformUserList.as_view())
+    url(r'platform_user_list', PlatformUserList.as_view()),
+    url(r'add_production_chatroom', AddProductionChatroom.as_view()),
+    url(r'remove_production_chatroom', RemoveProductionChatroom.as_view())
 ]
 
 
 urlpatterns = [
-    url(r'^admin/', admin.site.urls),
+    url(r'^xadmin/', xadmin.site.urls),
     url(r'^robot/', include(robot_urls)),
 ]

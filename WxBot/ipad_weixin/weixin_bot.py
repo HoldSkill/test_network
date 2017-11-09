@@ -641,8 +641,8 @@ class WXBot(object):
                             try:
                                 # 消息
                                 action_rule.filter_keyword_rule(v_user.userame, msg_dict)
-                                # from rule.sign_in_rule import filter_sign_in_keyword
-                                # filter_sign_in_keyword(v_user.userame, msg_dict)
+                                from rule.sign_in_rule import filter_sign_in_keyword
+                                filter_sign_in_keyword(v_user.userame, msg_dict)
                             except Exception as e:
                                 logger.error(e)
 
@@ -936,11 +936,11 @@ class WXBot(object):
         data = data + random_str
 
         # 图片压缩
-        max_length = 163840
+        max_length = 109226
         if len(data) > max_length:
             img = Image.open(BytesIO(data))
             img_buffer = BytesIO()
-            quality_rate = int(100 / (len(data) / max_length))
+            quality_rate = 40
             img.save(img_buffer, 'JPEG', quality=quality_rate)
             data = img_buffer.getvalue()
 

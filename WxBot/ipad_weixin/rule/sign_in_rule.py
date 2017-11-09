@@ -2,33 +2,21 @@
 
 import os
 import django
-os.environ.update({"DJANGO_SETTINGS_MODULE": "fuli.settings"})
+os.environ.update({"DJANGO_SETTINGS_MODULE": "WxBot.settings"})
 django.setup()
 
 from ipad_weixin.models import ChatRoom, SignInRule, ChatroomMember
 import time
 import re
-from ipad_weixin.send_msg_type import send_msg_type
+from ipad_weixin.send_msg_type import sendMsg
 import requests
 import json
 
+import logging
+logger = logging.getLogger("weixin_bot")
+
 
 def filter_sign_in_keyword(wx_id, msg_dict):
-    """
-    # 机器人自己在群里说话
-    {u'Status': 3,
-    u'PushContent': u'',
-    u'FromUserName': u'wxid_cegmcl4xhn5w22',
-    u'MsgId': 1650554654,
-    u'ImgStatus': 1,
-    u'ToUserName': u'6947816994@chatroom',
-    u'MsgSource': u'',
-    u'Content': u'\u4f60\u60f3\u8981\u7684\u90fd\u5728\u8fd9\u91cc',
-    u'MsgType': 1,
-    u'ImgBuf': None,
-    u'NewMsgId': 1582711830148784131,
-    u'CreateTime': 1508809888}
-    """
     # 首先判断content中是否包含红包口令
     if ':' in msg_dict['Content']:
         content = msg_dict['Content'].split(':')[1].strip()
@@ -41,8 +29,9 @@ def filter_sign_in_keyword(wx_id, msg_dict):
     speaker_id = ''
     chatroom = ''
     from_user_id = ''
+    # 粗略判断
     if content in keywords:
-        singin_rule = SignInRule.objects.filter(keyword=content).first()
+
         # 机器人自己在群里说话
         if '@chatroom' in msg_dict['ToUserName']:
             speaker_id = msg_dict['FromUserName']  # 微信ID
@@ -54,11 +43,13 @@ def filter_sign_in_keyword(wx_id, msg_dict):
             speaker_id = msg_dict['Content'].split(':')[0]
             from_user_id = msg_dict['FromUserName']
 
-        # 这里多加一层判断
-        if content in SignInRule.objects.filter(keyword=content, chatroom=chatroom):
-            speaker = ChatroomMember.objects.filter(username=speaker_id).first()
-            speaker_name = speaker.nickname
-            if u"果粉街" in chatroom.nickname:
+        # 判断该群的签到规则是否为keyword
+        try:
+            sign_rule_db = SignInRule.objects.get(keyword=content, chatroom=chatroom)
+
+            if sign_rule_db:
+                speaker = ChatroomMember.objects.filter(username=speaker_id).first()
+                speaker_name = speaker.nickname
                 data = {
                     "speaker_nick_name_trim": get_nick_name_trim(speaker_name),
                     "time": {"$date": int(round(time.time() * 1000))},
@@ -69,7 +60,7 @@ def filter_sign_in_keyword(wx_id, msg_dict):
                 }
 
                 url = 'http://s-poc-02.qunzhu666.com/365/api/clockin/'
-                request_url = url + singin_rule.red_packet_id
+                request_url = url + sign_rule_db.red_packet_id
                 json_data = json.dumps(data)
                 response = requests.post(request_url, data=json_data)
                 body = json.loads(response.content)
@@ -78,26 +69,20 @@ def filter_sign_in_keyword(wx_id, msg_dict):
                 for reaction in reaction_list:
                     if reaction['type'] == 'text':
                         text = reaction['content']
+                        send_text = "@" + speaker_name + '\\n' + text
 
-                        text_msg_dict = {
-                            "uin": wx_id,
-                            "group_id": from_user_id,
-                            "text": "@" + speaker_name + '\\n' + text,
-                            "type": "text",
-                        }
-                        send_msg_type(text_msg_dict, at_user_id=speaker_id)
+                        # 发送文字消息
+                        sendMsg(wx_id, from_user_id, [send_text], speaker_id)
 
                     elif reaction['type'] == 'img':
 
                         img_url = reaction['content']
                         if img_url:
-                            img_msg_dict = {
-                                "uin": wx_id,
-                                "group_id": from_user_id,
-                                "text": img_url,
-                                "type": "img"
-                            }
-                            send_msg_type(img_msg_dict, at_user_id=None)
+                            # 发送图片信息
+                            sendMsg(wx_id, from_user_id, [img_url])
+        except Exception as e:
+            logger.error(e)
+
     else:
         pass
 
@@ -130,18 +115,20 @@ def convert_emoji_from_html_to_unicode(s):
 
 if __name__ == '__main__':
     wx_id = "wxid_cegmcl4xhn5w22"
-    msg_dict = {u'Status': 3,
-                u'PushContent': u'\u964c : \u4eca\u5929\u6211\u8981\u597d\u597d\u8d5a\u94b1',
-                u'FromUserName': u'6947816994@chatroom',
-                u'MsgId': 1650548075,
-                u'ImgStatus': 1,
-                u'ToUserName': u'wxid_cegmcl4xhn5w22',
-                u'MsgSource': u'<msgsource>\n\t<silence>0</silence>\n\t<membercount>4</membercount>\n</msgsource>\n',
-                u'Content': u'wxid_9zoigugzqipj21:\n\u4eca\u5929\u6211\u8981\u597d\u597d\u8d5a\u94b1',
-                u'MsgType': 1,
-                u'ImgBuf': None,
-                u'NewMsgId': 9134144839524001013,
-                u'CreateTime': 1507951268
+    # 机器人自己在群里说话
+    msg_dict = {
+        u'Status': 3,
+        u'PushContent': u'',
+        u'FromUserName': u'wxid_cegmcl4xhn5w22',
+        u'MsgId': 1650554654,
+        u'ImgStatus': 1,
+        u'ToUserName': u'6610815091@chatroom',
+        u'MsgSource': u'',
+        u'Content': u'签到测试',
+        u'MsgType': 1,
+        u'ImgBuf': None,
+        u'NewMsgId': 1582711830148784131,
+        u'CreateTime': 1508809888
     }
 
     filter_sign_in_keyword(wx_id, msg_dict)
