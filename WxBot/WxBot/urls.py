@@ -39,8 +39,12 @@ robot_urls = [
     url(r'remove_production_chatroom', RemoveProductionChatroom.as_view())
 ]
 
+xadmin_urls = [
+    url(r'admin', xadmin.site.urls)
+]
+
 
 urlpatterns = [
-    url(r'^xadmin/', xadmin.site.urls),
+    url(r'^maxwell/', include(xadmin_urls)),
     url(r'^robot/', include(robot_urls)),
 ]

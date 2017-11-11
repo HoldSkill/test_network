@@ -205,19 +205,19 @@ class Contact(models.Model):
 
 
 class ChatRoom(models.Model):
-    username = models.CharField(max_length=100)
-    nickname = models.CharField(max_length=100)
+    username = models.CharField(max_length=100, verbose_name=u"群ID")
+    nickname = models.CharField(max_length=100, verbose_name=u"群名称")
     signature = models.CharField(max_length=200)
     small_head_img_url = models.URLField()
     big_head_img_url = models.URLField()
     province = models.CharField(max_length=100)
     city = models.CharField(max_length=100)
     alias = models.CharField(max_length=100)
-    chat_room_owner = models.CharField(max_length=200)
+    chat_room_owner = models.CharField(max_length=200, verbose_name=u"群主ID")
     chat_room_version = models.CharField(max_length=50, default='')
-    wx_user = models.ManyToManyField(WxUser)
-    member_nums = models.IntegerField(default=0)
-    is_send = models.BooleanField(default=False)
+    wx_user = models.ManyToManyField(WxUser, verbose_name=u"微信ID")
+    member_nums = models.IntegerField(default=0, verbose_name=u"群成员数量")
+    is_send = models.BooleanField(default=False, verbose_name=u"是否为生产群")
 
 
     def update_from_msg_dict(self, msg_dict):

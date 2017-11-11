@@ -13,6 +13,7 @@ from ipad_weixin.weixin_bot import WXBot
 from ipad_weixin.models import Qrcode, WxUser, ChatRoom, SignInRule, PushRecord, PlatformInformation
 from ipad_weixin.heartbeat_manager import HeartBeatManager
 from ipad_weixin.send_msg_type import sendMsg
+from ipad_weixin.utils.oss_utils import beary_chat
 
 import thread
 
@@ -32,7 +33,11 @@ class SendMsgView(View):
         for wxuser in wxuser_list:
             chatroom_list = ChatRoom.objects.filter(wx_user=wxuser, is_send=True)
             if not chatroom_list:
-                return HttpResponse(json.dumps({"ret": 0, "data": "发单群为空"}))
+                platform_id = User.objects.get(username=md_username).first_name
+                beary_chat("平台：%s, %s 生产群为空" % (platform_id, wxuser.nickname))
+                continue
+                # 这里如果直接返回的话，那么接下的wxuser将得不到处理
+                # return HttpResponse(json.dumps({"ret": 0, "data": "发单群为空"}))
 
             for chatroom in chatroom_list:
                 # 一个群一个线程去处理
@@ -44,6 +49,9 @@ class SendMsgView(View):
 
 
 class PlatformUserList(View):
+    """
+    筛选登录了该平台所有的用户，返回手机号以及对应的机器人列表
+    """
     def get(self, request):
         platform_id = request.GET.get("platform_id", "")
         if not platform_id:
@@ -61,7 +69,6 @@ class PlatformUserList(View):
             wxuser_nickname_list = [wxuser.nickname for wxuser in wxuser_db]
             data = {"user": username, "wxuser_list": wxuser_nickname_list}
             login_user_list.append(data)
-        # login_user_list = list(set(login_user.username for login_user in login_user_db))
         """
         {
             "login_user_list":[
@@ -77,6 +84,7 @@ class AddProductionChatroom(View):
     @csrf_exempt
     def post(self, request):
         """
+        添加生产群
         数据类型：josn
         格式：
         {
@@ -101,6 +109,7 @@ class RemoveProductionChatroom(View):
     @csrf_exempt
     def post(self, request):
         """
+        移除生产群
         接口: http://s-prod-04.qunzhu666.com:10024/robot/add_production_chatroom
         本地: localhost:10024/robot/remove_production_chatroom/
         """
@@ -118,7 +127,14 @@ class RemoveProductionChatroom(View):
 
 class DefineSignRule(View):
     """
-    接口： http://s-prod-04.qunzhu666.com:8080/robot/define_sign_rule
+    为生产群定义签到红包口令
+    格式：
+        {
+            "md_username":
+            "keyword": "签到口令",
+            "platform_id":
+        }
+    接口： http://s-prod-04.qunzhu666.com:8080/robot/define_sign_rule/
     本地： localhost:10024/robot/define_sign_rule/
     """
     @csrf_exempt
@@ -131,10 +147,10 @@ class DefineSignRule(View):
         red_packet_id = PlatformInformation.objects.get(platform_id=platform_id, is_customer_server=False).red_packet_id
         wx_user = WxUser.objects.filter(user__username=md_username).first()
 
-        # 只有在发单群才能够添加签到规则
+        # 只有在生产群才能够添加签到规则
         chatroom_list = ChatRoom.objects.filter(wx_user__username=wx_user.username, is_send=True)
         if not chatroom_list:
-            return HttpResponse(json.dumps({"ret": 0, "reason": "发单群为空"}))
+            return HttpResponse(json.dumps({"ret": 0, "reason": "生产群为空"}))
         sign_rule = SignInRule()
         sign_rule.keyword = keyword
         sign_rule.red_packet_id = red_packet_id

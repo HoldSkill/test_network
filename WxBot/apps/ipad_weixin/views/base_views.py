@@ -9,7 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
 from ipad_weixin.weixin_bot import WXBot
-from ipad_weixin.models import Qrcode, WxUser, ChatRoom, SignInRule
+from ipad_weixin.models import Qrcode, WxUser, ChatRoom, SignInRule, PlatformInformation
 from ipad_weixin.heartbeat_manager import HeartBeatManager
 
 import logging
@@ -18,14 +18,22 @@ logger = logging.getLogger('django_views')
 
 class GetQrcode(View):
     """
-    接口： http://s-prod-04.quinzhu666.com：8080/robot/getqrcode?username=md_username
+    接口： http://s-prod-04.quinzhu666.com：8080/robot/getqrcode/
+    格式：
+        {
+            "username": "smart",
+            "platform_id": ""
+        }
     """
+    @csrf_exempt
     def post(self, request):
         req_dict = json.loads(request.body)
         md_username = req_dict.get('username', '')
         platform_id = req_dict.get('platform_id', '')
         if not platform_id:
-            return HttpResponse(json.dumps({"Error": "未知平台"}))
+            return HttpResponse(json.dumps({"ret": 0, "reason": "platform_id为空"}))
+        if not PlatformInformation.objects.filter(platform_id=platform_id):
+            return HttpResponse(json.dumps({"ret": 0, "reason": "未知平台"}))
 
         wx_bot = WXBot()
         (oss_path, qrcode_rsp, deviceId, uuid) = wx_bot.get_qrcode(md_username)
@@ -39,6 +47,7 @@ class GetQrcode(View):
 
 class HostList(View):
     """
+    返回用户所有的群组以及生产群
     接口： http://s-prod-04.quinzhu666.com:8080/robot/host_list?username=md_username
     """
     def get(self, request):
@@ -53,7 +62,8 @@ class HostList(View):
                 name = wxuser.nickname
                 chatroom_list = ChatRoom.objects.filter(wx_user__username=wxuser.username)
                 for chatroom in chatroom_list:
-                    robot_chatroom_list.append(chatroom.nickname)
+                    robot_chatroom_list.append({"nickname": chatroom.nickname,
+                                                "username": chatroom.username})
                     if chatroom.is_send:
                         production_chatroom_list.append({"nickname": chatroom.nickname,
                                                          "username": chatroom.username})
