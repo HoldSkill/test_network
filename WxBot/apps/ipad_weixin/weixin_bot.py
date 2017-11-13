@@ -16,12 +16,12 @@ import urllib2
 import datetime
 import requests
 import re
-from io import BytesIO
 from PIL import Image
+from io import BytesIO
 
 import os
 import django
-os.environ.update({"DJANGO_SETTINGS_MODULE": "WxBot.settings"})
+os.environ.update({"DJANGO_SETTINGS_MODULE": "fuli.settings"})
 django.setup()
 
 import settings
@@ -39,7 +39,6 @@ from ipad_weixin.utils.common_utils import get_time_stamp, read_int, int_list_co
     check_buffer_16_is_191, get_public_ip, check_grpc_response, get_md5
 from ipad_weixin.rule import action_rule
 
-# from broadcast.models.user_models import TkUser
 from django.contrib.auth.models import User as AuthUser
 from ipad_weixin.models import WxUser, Contact, Message, Qrcode, BotParam, Img, ChatRoom, \
     ChatroomMember
@@ -65,25 +64,33 @@ class WXBot(object):
         # 图片重试次数
         self.__retry_num = 1
         self._auto_retry = 0
+        self.nickname = None
+        # self.start_time = datetime.datetime.now()
 
     def set_user_context(self, wx_username):
         # TODO：self.wx_username 不该在这初始化，待修改
         """为什么不应该在这里初始化？"""
-        self.wx_username = wx_username
-        user_db = WxUser.objects.filter(username=self.wx_username).first()
-        if user_db:
-            user_db.login = 1
-            user_db.save()
-            logger.info("%s: 重置用户login成功" % user_db.nickname)
-        else:
-            logger.info("%s: 重置用户login失败，wx_username不存在" % self.wx_username)
-            return
         # 数据库中查询
+        self.wx_username = wx_username
         bot_param = BotParam.objects.filter(username=wx_username).first()
         if bot_param:
             self.long_host = bot_param.long_host
             self.short_host = bot_param.short_host
         self.wechat_client = WechatClient.WechatClient(self.long_host, 80, True)
+
+    def set_user_login(self, wx_username):
+        self.wx_username = wx_username
+        user_db = WxUser.objects.filter(username=self.wx_username).first()
+
+        if user_db:
+            self.nickname = user_db.nickname
+            user_db.login = 1
+            user_db.save()
+            logger.info("%s: 重置用户login成功" % self.nickname)
+            return True
+        else:
+            logger.info("%s: 重置用户login失败，wx_username不存在" % self.wx_username)
+            return False
 
     def open_notify_callback(self):
         # 注册回调
@@ -92,6 +99,7 @@ class WXBot(object):
     def process_notify_package(self, data):
         # 接收到notify包时的回调处理
         cmd = common_utils.read_int(data, 8)
+        logger.info("%s: 接收到cmd为%s的notify消息" % (self.nickname, cmd))
         if cmd == 318:
             print "cmd 318"
             # 这里decode出来的都是微信的官网的html，所以没必要print出来了
@@ -102,18 +110,24 @@ class WXBot(object):
         if data is not None and len(data) >= 4:
             selector = common_utils.read_int(data, 16)
             if selector > 0:
-                logger.info("selector:{0} start sync thread".format(selector))
+                logger.info("{0}: selector:{1} 即将进行线程同步".format(self.nickname, selector))
                 # print "selector:{0} start sync thread".format(selector)
+                if selector >= 1000000000:
+                    if self.wechat_client.connected:
+                        self.wechat_client.close_when_done()
+                        self._auto_retry += 1
+                        red.set('v_user_heart_' + self.wx_username, 0)
+                        logger.info("{}: selector异常，值为{}，可能用户执行下线，尝试二次登录".format(self.nickname, selector))
 
                 # TODO：在 set_user_context 中定义的wx_username, 这么写不好, 待修改
-                if self.wx_username is not None and self.wx_username != "":
+                elif self.wx_username is not None and self.wx_username != "":
                     if self._lock.acquire():
                         # 确保只有一个线程在执行async_check，否则会接受多次相同的消息
                         if not self.__is_async_check:
                             self.__is_async_check = True
                             self._lock.release()
                         else:
-                            logger.info("----------已有线程执行async_check，跳过async_check---------")
+                            logger.info("%s: ----------已有线程执行async_check，跳过async_check---------" % self.nickname)
                             # print "*********skip async check*********"
                             self._lock.release()
                             return
@@ -122,42 +136,52 @@ class WXBot(object):
                     # 因为用户ipad登陆的同时登陆其他平台，socket仍然会收到notify包
 
                     user_db = WxUser.objects.filter(username=self.wx_username).first()
-                    is_login = user_db.login == 1
+                    is_login = user_db.login
+                    v_user = pickle.loads(red.get('v_user_' + self.wx_username))
 
                     if is_login:
                         # bot = WXBot()
-                        v_user = pickle.loads(red.get('v_user_' + self.wx_username))
+
                         # bot_param = BotParam.objects.filter(username=v_user.userame).first()
                         # if bot_param:
                         #     bot.long_host = bot_param.long_host
                         #     bot.wechat_client = WechatClient.WechatClient(bot.long_host, 80, True)
                         # starttime = datetime.datetime.now()
-                        if self._lock.acquire():
-                            res = self.async_check(v_user)
-                            self._lock.release()
 
-                            if res is False:
-                                logger.info("%s: 线程执行同步失败" % v_user.nickname)
-                            elif res is 'ERROR' and self._auto_retry == 29:
-                                self._auto_retry += 1
-                                logger.info("%s: 即将退出机器人" % v_user.nickname)
-                                # self.wechat_client.close_when_done()
-                                # self.logout_bot(v_user)
-                            elif res is 'ERROR' and self._auto_retry >= 0:
-                                logger.info("%s: 线程同步返回微信错误，尝试重启心跳" % v_user.nickname)
-                                oss_utils.beary_chat("淘宝客{0}: 线程同步返回微信错误，尝试重启心跳".format(v_user.nickname))
-                                self._auto_retry += 1
-                                # self.wechat_client.close_when_done()
-                            else:
-                                logger.info("%s: 线程执行同步成功" % v_user.nickname)
+                        res = self.async_check(v_user)
+                        # self.start_time = datetime.datetime.now()
+
+                        if res is False:
+                            logger.info("%s: 线程执行同步失败" % v_user.nickname)
+                        elif res is 'ERROR' and self._auto_retry == 29:
+                            self._auto_retry += 1
+                            logger.info("%s: 即将退出机器人" % v_user.nickname)
+                            red.set('v_user_heart_' + self.wx_username, 0)
+                            # self.wechat_client.close_when_done()
+                            # self.logout_bot(v_user)
+                        elif res is 'ERROR' and self._auto_retry >= 0:
+                            logger.info("%s: 线程同步返回微信错误，尝试重启心跳" % v_user.nickname)
+                            oss_utils.beary_chat("{}: 线程同步返回微信错误，尝试重启心跳".format(v_user.nickname))
+                            self._auto_retry += 1
+                            red.set('v_user_heart_' + self.wx_username, 0)
+                            # self.wechat_client.close_when_done()
+                        else:
+                            logger.info("%s: 线程执行同步成功" % v_user.nickname)
                         # bot.wechat_client.close_when_done()
+                    else:
+                        logger.info("%s login为0！" % v_user.nickname)
                     self.__is_async_check = False
+            else:
+                logger.info("%s: selector小于等于0，未执行线程同步" % self.nickname)
+        else:
+            logger.info("%s: 未收到有效数据，未执行线程同步" % self.nickname)
 
     def logout_bot(self, v_user):
         # 退出机器人，并非退出微信登陆
         user_db = WxUser.objects.filter(username=v_user.userame).first()
         user_db.login = 0
         user_db.save()
+        logger.info("%s: 退出机器人，当前login为%s" % (user_db.nickname, user_db.login))
 
     def get_qrcode(self, md_username):
         """
@@ -400,7 +424,7 @@ class WXBot(object):
         elif qrcode_login_rsp.baseMsg.ret == 0:
             # 返回0代表登陆成功
             logger.info('%s 登录成功' % qr_code['Nickname'])
-            oss_utils.beary_chat("%s 扫码完成，开启心跳中--%s--%s" % (qr_code['Nickname'], int(time.time()), qr_code['Username']))
+            oss_utils.beary_chat("%s 扫码完成，开启心跳中--%s" % (qr_code['Nickname'], time.asctime(time.localtime(time.time()))))
 
             # 将User赋值
             v_user = qrcode_login_rsp.baseMsg.user
@@ -550,15 +574,15 @@ class WXBot(object):
                 logger.error(e)
                 ret_reason = "未知"
 
-            logger.info("淘宝客{0}: 已掉线,原因:{1}".format(v_user.nickname, ret_reason))
-            oss_utils.beary_chat("淘宝客{0}: 已掉线,原因:{1}".format(v_user.nickname, ret_reason))
+            logger.info("{0}: 已掉线,原因:{1}".format(v_user.nickname, ret_reason))
+            oss_utils.beary_chat("{0}: 已掉线,原因:{1}".format(v_user.nickname, ret_reason))
             self.wechat_client.close_when_done()
             return 'Logout'
         else:
             logger.info("二次登陆未知返回码")
             ret_code = auto_auth_rsp_2.baseMsg.ret
-            oss_utils.beary_chat("淘宝客{0}: 已掉线,未知返回码:{1}".format(v_user.nickname, ret_code))
-            logger.info("淘宝客：{0} 已掉线,未知返回码:{1}".format(v_user.nickname, ret_code))
+            oss_utils.beary_chat("{0}: 已掉线,未知返回码:{1}".format(v_user.nickname, ret_code))
+            logger.info("{0}: 已掉线,未知返回码:{1}".format(v_user.nickname, ret_code))
             self.wechat_client.close_when_done()
             return False
 
@@ -570,6 +594,7 @@ class WXBot(object):
         :param new_socket:
         :return:
         """
+        self.start_time = datetime.datetime.now()
         while True:
             sync_req = WechatMsg(
                 token=CONST_PROTOCOL_DICT['machine_code'],
@@ -608,7 +633,7 @@ class WXBot(object):
                         return True
                     else:
                         logger.info("%s: 执行二次登录失败， 即将退出机器人" % v_user.nickname)
-                        oss_utils.beary_chat("淘宝客%s: 执行二次登录失败， 即将退出机器人" % v_user.nickname)
+                        oss_utils.beary_chat("%s: 执行二次登录失败， 即将退出机器人" % v_user.nickname)
                         self.wechat_client.close_when_done()
                         self.logout_bot(v_user)
                         return False
@@ -663,17 +688,16 @@ class WXBot(object):
                                     chatroom.chat_room_owner = chatroom_owner
                                     chatroom.save()
 
-                                if not ChatRoom.objects.filter(wx_user__username=v_user.userame,
-                                                               username=chatroom_name) \
-                                        or chatroom.nickname == '' or chatroom.nickname == None:
+                                if not ChatRoom.objects.filter(wx_user__username=v_user.userame, username=chatroom_name) \
+                                        or not chatroom.nickname:
                                     self.get_and_update_chatroom(v_user, chatroom_name, chatroom)
                                 else:
                                     # 该群存在, 则可能是更改群名称、拉/踢人等。
                                     if msg_dict['Status'] == 4:
                                         self.update_chatroom_members(chatroom_name, v_user)
                                         # TODO: 目前存在某些问题，待解决。
-                                        # if u"邀请" in msg_dict['Content']:
-                                        #     self.send_invited_message(msg_dict)
+                                        if u"邀请" in msg_dict['Content']:
+                                            self.send_invited_message(msg_dict, v_user)
 
                             try:
                                 message, created = Message.objects.get_or_create(msg_id=msg_dict['MsgId'])
@@ -687,15 +711,17 @@ class WXBot(object):
                     logger.info("%s: 同步资料完成" % v_user.nickname)
                     return True
 
-    def send_invited_message(self, msg_dict):
-        nicakname_str = re.match('.*?(".*?").*?', msg_dict['Content'])
+    def send_invited_message(self, msg_dict, v_user):
+        pattern = '.*邀请"(.*?)".*'
+        content = msg_dict['Content'].encode("utf-8")
+        nicakname_str = re.match(pattern, content, re.S)
         if nicakname_str:
-            invited_nickname = nicakname_str.group(1).strip('"')
+            invited_nickname = nicakname_str.group(1)
             chatroom_member = ChatroomMember.objects.filter(nickname=invited_nickname).first()
             invited_member_id = chatroom_member.username
 
-            message = "@" + invited_nickname + "\n 啊哈，欢迎你的到来~"
-            self.send_text_msg(msg_dict['FromUserName'], message, v_user,at_user_id=invited_member_id)
+            message = "@" + invited_nickname + "\\n 啊哈，欢迎你的到来~"
+            self.send_text_msg(msg_dict['FromUserName'], message, v_user, at_user_id=invited_member_id)
 
     def new_init(self, v_user, md_username, platform_id):
         """
@@ -800,18 +826,17 @@ class WXBot(object):
             try:
                 wxuser = WxUser.objects.filter(username=v_user.userame).order_by('-id').first()
 
-                # tk_user = TkUser.get_user(md_username)
-                # wxuser.user.add(tk_user.user)
-                # wxuser.save()
                 user, created = AuthUser.objects.get_or_create(username=md_username)
                 user.first_name = platform_id
                 user.save()
 
                 wxuser.user.add(user)
                 wxuser.save()
+                wxuser.save()
                 logger.info("%s 初始化成功！" % v_user.nickname)
             except Exception as e:
                 logger.error(e)
+                sys.exit(1)
 
 
             self.newinitflag = False
@@ -854,13 +879,13 @@ class WXBot(object):
         if not grpc_buffers:
             logger.info("%s: grpc返回错误" % v_user.nickname)
             # self.wechat_client.close_when_done()
-            return False
+            # return False
 
         buffers = self.wechat_client.sync_send_and_return(grpc_buffers)
 
         if not buffers:
             logger.info("%s: buffers为空" % v_user.nickname)
-            return False
+            # return False
 
         # while not buffers:
         #     buffers = self.wechat_client.get_packaget_by_seq(seq)
@@ -868,13 +893,13 @@ class WXBot(object):
         if ord(buffers[16]) != 191:
             logger.info("%s: 微信返回错误" % v_user.nickname)
             # self.wechat_client.close_when_done()
-            return False
+            # return False
 
         else:
             logger.info('{0} 向 {1} 发送文字信息:成功'.format(v_user.nickname, user_name, content))
 
         self.wechat_client.close_when_done()
-        return True
+        # return True
 
     def send_voice_msg(self, v_user, to_user_name, url):
         """
@@ -929,7 +954,10 @@ class WXBot(object):
             self.long_host = bot_param.long_host
             self.wechat_client = WechatClient.WechatClient(self.long_host, 80, True)
 
-        data = urllib2.urlopen(url).read()
+        try:
+            data = urllib2.urlopen(url).read()
+        except:
+            self.wechat_client.close_when_done()
 
         import random
         random_str = str(random.randint(0, 999))
@@ -998,7 +1026,7 @@ class WXBot(object):
             if not grpc_buffers:
                 logger.info("%s: grpc返回错误" % v_user.nickname)
                 # self.wechat_client.close_when_done()
-                return False
+                # return False
 
             buffers = self.wechat_client.sync_send_and_return(grpc_buffers, time_out=3)
 
@@ -1011,7 +1039,7 @@ class WXBot(object):
                 logger.info("%s: 微信返回错误" % v_user.nickname)
                 logger.info("%s: 图片发送失败" % v_user.nickname)
                 # self.wechat_client.close_when_done()
-                return False
+                # return False
             else:
                 logger.info(
                     '{0} 向 {1} 发送图片, 共{2}次, 第{3}次发送成功'.format(v_user.nickname, user_name, total_send_nums, send_num))
@@ -1019,7 +1047,7 @@ class WXBot(object):
             start_pos = start_pos + count
             send_num += 1
         self.wechat_client.close_when_done()
-        return True
+        # return True
 
     def retry_send_img(self, img_msg_req):
         img_msg_rsp = grpc_client.send(img_msg_req)
@@ -1487,14 +1515,11 @@ class WXBot(object):
         if qr_code is not False:
 
             if self.confirm_qrcode_login(qr_code, md_username, keep_heart_beat=False) == -301:
+                oss_utils.beary_chat("%s 进入check_and_confirm_and_load -301" % md_username)
                 if self.confirm_qrcode_login(qr_code, md_username, keep_heart_beat=False):
                     v_user_pickle = red.get('v_user_' + str(qr_code['Username']))
                     v_user = pickle.loads(v_user_pickle)
                     self.new_init(v_user, md_username, platform_id)
-                    # 此时数据库中存在nickname
-                    wxuser = WxUser.objects.filter(user__username=md_username).order_by('-id').first()
-                    logger.info("%s 进入confirm_qrcode_login == -301" %wxuser.nickname)
-                    oss_utils.beary_chat("%s 进入confirm_qrcode_login == -301" %wxuser.nickname)
                     if not self.newinitflag:
                         v_user = pickle.loads(red.get('v_user_' + str(qr_code['Username'])))
                         while not self.async_check(v_user):
@@ -1502,19 +1527,29 @@ class WXBot(object):
                                 return False
                             time.sleep(3)
 
-                        from ipad_weixin.heartbeat_manager import HeartBeatManager
-                        HeartBeatManager.begin_heartbeat(v_user.userame)
+                        heart_status = red.get('v_user_heart_' + str(qr_code['Username']))
+                        if heart_status:
+                            if int(heart_status) is not 1:
+                                red.set('v_user_heart_' + str(qr_code['Username']), 0)
+                                from ipad_weixin.heartbeat_manager import HeartBeatManager
+                                HeartBeatManager.begin_heartbeat(v_user.userame)
+                            else:
+                                logger.info("%s: 心跳已经存在" % md_username)
+                                oss_utils.beary_chat("%s: 心跳已经存在，无需启动心跳" % md_username)
+
+                        else:
+                            red.set('v_user_heart_' + str(qr_code['Username']), 0)
+                            from ipad_weixin.heartbeat_manager import HeartBeatManager
+                            HeartBeatManager.begin_heartbeat(v_user.userame)
                         return True
                 else:
                     logger.info("GG 重新登录吧大兄弟")
 
             if self.confirm_qrcode_login(qr_code, md_username, keep_heart_beat=False):
+                oss_utils.beary_chat("%s 未进入check_and_confirm_and_load -301" % md_username)
                 v_user_pickle = red.get('v_user_' + str(qr_code['Username']))
                 v_user = pickle.loads(v_user_pickle)
                 self.new_init(v_user, md_username, platform_id)
-                wxuser = WxUser.objects.filter(user__username=md_username).order_by('-id').first()
-                logger.info("%s 未进入confirm_qrcode_login == -301" % wxuser.nickname)
-                oss_utils.beary_chat("%s 未进入confirm_qrcode_login == -301" % wxuser.nickname)
                 if not self.newinitflag:
                     v_user = pickle.loads(red.get('v_user_' + str(qr_code['Username'])))
                     while not self.async_check(v_user):
@@ -1522,9 +1557,22 @@ class WXBot(object):
                             return False
                         time.sleep(3)
 
-                    from ipad_weixin.heartbeat_manager import HeartBeatManager
-                    HeartBeatManager.begin_heartbeat(v_user.userame)
+                    heart_status = red.get('v_user_heart_' + str(qr_code['Username']))
+                    if heart_status:
+                        if int(heart_status) is not 1:
+                            red.set('v_user_heart_' + str(qr_code['Username']), 0)
+                            from ipad_weixin.heartbeat_manager import HeartBeatManager
+                            HeartBeatManager.begin_heartbeat(v_user.userame)
+                        else:
+                            logger.info("%s: 心跳已经存在" % md_username)
+                            oss_utils.beary_chat("%s: 心跳已经存在，无需启动心跳" % md_username)
+
+                    else:
+                        red.set('v_user_heart_' + str(qr_code['Username']), 0)
+                        from ipad_weixin.heartbeat_manager import HeartBeatManager
+                        HeartBeatManager.begin_heartbeat(v_user.userame)
                     return True
+
 
                     # 将心跳放在async_check中 modified 2017年09月28日14:01:14
                     # from ipad_weixin.heartbeat_manager import HeartBeatManager

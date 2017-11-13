@@ -3,6 +3,9 @@ from __future__ import unicode_literals
 
 import json
 import datetime
+import pickle
+import time
+
 from django.http import HttpResponse
 from django.views.generic.base import View
 from django.views.decorators.csrf import csrf_exempt
@@ -11,6 +14,8 @@ from django.utils import timezone
 from ipad_weixin.weixin_bot import WXBot
 from ipad_weixin.models import Qrcode, WxUser, ChatRoom, SignInRule, PlatformInformation
 from ipad_weixin.heartbeat_manager import HeartBeatManager
+from ipad_weixin.settings import red
+from ipad_weixin.utils import oss_utils
 
 import logging
 logger = logging.getLogger('django_views')
@@ -164,6 +169,20 @@ class ResetSingleHeartBeat(View):
     """
     def get(self, request):
         username = request.GET.get('username')
+        v_user_pickle = red.get('v_user_' + username)
+        v_user = pickle.loads(v_user_pickle)
+        if v_user:
+            wx_bot = WXBot()
+            wx_bot.logout_bot(v_user)
+            heart_status = red.get('v_user_heart_' + username)
+            if heart_status:
+                if int(heart_status) == 1:
+                    red.set('v_user_heart_' + username, 2)
+                    logger.info("%s: 准备终止用户心跳，需要大概30s" % username)
+                    oss_utils.beary_chat("%s: 准备终止用户心跳，需要大概30s..." % username)
+                    time.sleep(30)
+
+            red.set('v_user_heart_' + username, 0)
         if username in HeartBeatManager.heartbeat_thread_dict:
             del HeartBeatManager.heartbeat_thread_dict[username]
         HeartBeatManager.begin_heartbeat(username)

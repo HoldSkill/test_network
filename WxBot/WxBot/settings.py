@@ -93,16 +93,28 @@ CACHES = {
     },
 }
 
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'OPTIONS': {'charset': 'utf8mb4'},
         'NAME': 'weixinbot',
         'USER': 'root',
-        'PASSWORD': 'keyerror',
+        'PASSWORD': 'Xiaozuanfeng',
+        'HOST': 's-poc-01.qunzhu666.com',
+        'PORT': '50001',
     }
 }
+
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'OPTIONS': {'charset': 'utf8mb4'},
+#         'NAME': 'weixinbot',
+#         'USER': 'root',
+#         'PASSWORD': 'keyerror',
+#     }
+# }
 
 
 # Password validation
