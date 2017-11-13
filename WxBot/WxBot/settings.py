@@ -105,7 +105,7 @@ DATABASES = {
         'NAME': 'wxbot',
         'USER': 'root',
         'PASSWORD': 'Xiaozuanfeng',
-        'HOST': 's-poc-02.qunzhu666.com',
+        'HOST': 's-prod-02.qunzhu666.com',
         'PORT': '50001',
     }
 }
