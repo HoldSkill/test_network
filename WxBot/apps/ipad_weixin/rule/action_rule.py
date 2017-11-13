@@ -32,7 +32,7 @@ def filter_keyword_rule(wx_id, msg_dict):
         # 情况分类1 机器人自己说找XX
         if msg_dict['FromUserName'] == wx_id and "@chatroom" in msg_dict['ToUserName']:
             gid = msg_dict['ToUserName']
-            wxuser = WxUser.objects.get(username=msg_dict["FromUserName"])
+            wxuser = WxUser.objects.filter(username=msg_dict["FromUserName"]).order_by('-id').first()
 
             at_user_nickname = '@' + wxuser.nickname
         # 情况分类2 群成员说找XX
