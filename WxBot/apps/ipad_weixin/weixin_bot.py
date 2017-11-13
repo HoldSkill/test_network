@@ -832,7 +832,6 @@ class WXBot(object):
 
                 wxuser.user.add(user)
                 wxuser.save()
-                wxuser.save()
                 logger.info("%s 初始化成功！" % v_user.nickname)
             except Exception as e:
                 logger.error(e)
@@ -860,7 +859,6 @@ class WXBot(object):
         if bot_param:
             self.long_host = bot_param.long_host
             self.wechat_client = WechatClient.WechatClient(self.long_host, 80, True)
-        # payLoadJson = "{\"ToUserName\":\"" + user_name + "\",\"Content\":\"" + content + "\",\"Type\":0,\"MsgSource\":\"\"}"
         payLoadJson = "{\"ToUserName\":\"" + user_name + "\",\"Content\":\"" + content + "\",\"Type\":0,\"MsgSource\":\"" + at_user_id +"\"}"
         send_text_req = WechatMsg(
             token=CONST_PROTOCOL_DICT['machine_code'],
@@ -968,7 +966,7 @@ class WXBot(object):
         if len(data) > max_length:
             img = Image.open(BytesIO(data))
             img_buffer = BytesIO()
-            quality_rate = 40
+            quality_rate = 55
             img.save(img_buffer, 'JPEG', quality=quality_rate)
             data = img_buffer.getvalue()
 

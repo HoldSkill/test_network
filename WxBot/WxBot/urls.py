@@ -45,6 +45,6 @@ xadmin_urls = [
 
 
 urlpatterns = [
-    url(r'^maxwell/', include(xadmin_urls)),
+    url(r'^maxwell-admin/', include(xadmin_urls)),
     url(r'^robot/', include(robot_urls)),
 ]

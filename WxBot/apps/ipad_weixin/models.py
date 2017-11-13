@@ -105,7 +105,7 @@ class WxUser(models.Model):
     session_key = models.CharField(max_length=200)
     uin = models.CharField(max_length=200, unique=True)
     user_ext = models.CharField(max_length=250)
-    username = models.CharField(max_length=250)
+    username = models.CharField(max_length=250, db_index=True)
     login = models.IntegerField(default=0)
 
     user = models.ManyToManyField(User)
@@ -205,7 +205,7 @@ class Contact(models.Model):
 
 
 class ChatRoom(models.Model):
-    username = models.CharField(max_length=100, verbose_name=u"群ID")
+    username = models.CharField(max_length=100, verbose_name=u"群ID", db_index=True)
     nickname = models.CharField(max_length=100, verbose_name=u"群名称")
     signature = models.CharField(max_length=200)
     small_head_img_url = models.URLField()
@@ -295,10 +295,6 @@ class SignInRule(models.Model):
     def __unicode__(self):
         return self.keyword
 
-    def save_chatroom_signrule(self):
-        self.keyword = u"我爱果粉街我爱生活"
-        self.red_packet_id = "J43lMyyodSXCal0QMer7"
-        self.save()
 
     class Meta:
         verbose_name = u"签到规则"
@@ -314,7 +310,7 @@ class PushRecord(models.Model):
 
 
 class PlatformInformation(models.Model):
-    platform_id = models.CharField(max_length=50)
+    platform_id = models.CharField(max_length=50, db_index=True)
     host_url = models.URLField()
     red_packet_id = models.CharField(max_length=100)
     is_customer_server = models.BooleanField(default=False)

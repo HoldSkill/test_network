@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+
+
 """
 Django settings for WxBot project.
 
@@ -41,7 +44,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'ipad_weixin',
     'xadmin',
-    'crispy_forms'
+    'crispy_forms',
+    'corsheaders'
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -93,6 +97,7 @@ CACHES = {
     },
 }
 
+# 测试服务器
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
