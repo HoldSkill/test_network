@@ -102,10 +102,10 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'OPTIONS': {'charset': 'utf8mb4'},
-        'NAME': 'weixinbot',
+        'NAME': 'wxbot',
         'USER': 'root',
         'PASSWORD': 'Xiaozuanfeng',
-        'HOST': 's-poc-01.qunzhu666.com',
+        'HOST': 's-poc-02.qunzhu666.com',
         'PORT': '50001',
     }
 }
@@ -162,6 +162,9 @@ CORS_ORIGIN_ALLOW_ALL = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = '/home/wxbot/static'
+
+
+
 APPEND_SLASH = False
 
 import logging
