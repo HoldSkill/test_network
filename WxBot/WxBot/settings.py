@@ -28,7 +28,7 @@ sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 SECRET_KEY = '&xbm0(79l*au6dix6m(+fedp)8_4wp6#%ipx%7@buf$+7xxn*)'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
@@ -161,10 +161,9 @@ CORS_ORIGIN_ALLOW_ALL = True
 # https://docs.djangoproject.com/en/1.9/howto/static-files/
 
 STATIC_URL = '/static/'
+STATIC_ROOT = '/home/wxbot/static'
 
-# STATIC_ROOT = 'static/'
 
-# STATIC_ROOT = os.path.join(BASE_DIR, 'statics')
 
 APPEND_SLASH = False
 

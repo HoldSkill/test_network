@@ -50,3 +50,4 @@ urlpatterns = [
     url(r'^91191b7a3172/', include(xadmin_urls)),
     url(r'^robot/', include(robot_urls)),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
