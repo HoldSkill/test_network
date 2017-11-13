@@ -30,7 +30,7 @@ SECRET_KEY = '&xbm0(79l*au6dix6m(+fedp)8_4wp6#%ipx%7@buf$+7xxn*)'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -102,10 +102,10 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'OPTIONS': {'charset': 'utf8mb4'},
-        'NAME': 'weixinbot',
+        'NAME': 'wxbot',
         'USER': 'root',
         'PASSWORD': 'Xiaozuanfeng',
-        'HOST': 's-poc-01.qunzhu666.com',
+        'HOST': 's-poc-02.qunzhu666.com',
         'PORT': '50001',
     }
 }
@@ -161,6 +161,10 @@ CORS_ORIGIN_ALLOW_ALL = True
 # https://docs.djangoproject.com/en/1.9/howto/static-files/
 
 STATIC_URL = '/static/'
+
+# STATIC_ROOT = 'static/'
+
+# STATIC_ROOT = os.path.join(BASE_DIR, 'statics')
 
 APPEND_SLASH = False
 
