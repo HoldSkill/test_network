@@ -13,7 +13,7 @@ def sendMsg(wx_id, chatroom_id, data, at_user_id=''):
     for item in data:
         if item.startswith("http"):
             wx_bot.send_img_msg(chatroom_id, v_user, item)
-        if item.startswith("<appmsg"):
+        elif item.startswith("<appmsg"):
             wx_bot.send_app_msg(v_user, chatroom_id, item)
         else:
             if '\n' in item or '\r' in item:

@@ -45,7 +45,8 @@ def filter_keyword_rule(wx_id, msg_dict):
         if chatroom:
             try:
                 # TODO: filter条件问题，是否会出现username ==null的情况
-                auth_user = User.objects.filter(wxuser__username=wx_id, first_name__isnull=False, username__isnull=False)
+                auth_user = User.objects.filter(wxuser__username=wx_id, first_name__isnull=False,
+                                                username__isnull=False).order_by('-id').first()
                 md_username = auth_user.username
                 platform_id = auth_user.first_name
                 # TODO: 这里应该有一个服务能够接受所有平台的请求并进行相应的处理，用以判断搜索的url
