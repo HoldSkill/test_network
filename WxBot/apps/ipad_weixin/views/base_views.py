@@ -35,6 +35,10 @@ class GetQrcode(View):
         req_dict = json.loads(request.body)
         md_username = req_dict.get('username', '')
         platform_id = req_dict.get('platform_id', '')
+
+        if not md_username:
+            return HttpResponse(json.dumps({"ret": 0, "reason": "username不允许为空"}))
+
         if not platform_id:
             return HttpResponse(json.dumps({"ret": 0, "reason": "platform_id为空"}))
         if not PlatformInformation.objects.filter(platform_id=platform_id):
@@ -57,6 +61,8 @@ class HostList(View):
     """
     def get(self, request):
         username = request.GET.get('username', '')
+        if not username:
+            return HttpResponse(json.dumps({"ret": 0, "reason": "username不允许为空"}))
         data = []
         try:
             wxusers = WxUser.objects.filter(user__username=username).all()

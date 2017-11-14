@@ -10,7 +10,6 @@ from django.utils.encoding import iri_to_uri
 from ipad_weixin.models import Qrcode, ChatRoom, ChatroomMember, WxUser, PlatformInformation
 from django.contrib.auth.models import User
 
-# from broadcast.models.user_models import Adzone
 import urllib
 import requests
 import json
@@ -45,7 +44,8 @@ def filter_keyword_rule(wx_id, msg_dict):
         chatroom = ChatRoom.objects.filter(is_send=True, username=gid).first()
         if chatroom:
             try:
-                auth_user = User.objects.get(wxuser__username=wx_id)
+                # TODO: filter条件问题，是否会出现username ==null的情况
+                auth_user = User.objects.filter(wxuser__username=wx_id, first_name__isnull=False, username__isnull=False)
                 md_username = auth_user.username
                 platform_id = auth_user.first_name
                 # TODO: 这里应该有一个服务能够接受所有平台的请求并进行相应的处理，用以判断搜索的url

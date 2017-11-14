@@ -1216,21 +1216,21 @@ class WXBot(object):
 
         (grpc_buffers, seq) = grpc_utils.get_seq_buffer(app_msg_rsp)
         if not grpc_buffers:
-            logger.info("%s: grpc返回错误" % v_user.nickname)
+            logger.info("%s: grpc返回错误" % from_user.nickname)
             # self.wechat_client.close_when_done()
             return False
 
         buffers = self.wechat_client.sync_send_and_return(grpc_buffers)
 
         if not buffers:
-            logger.info("%s: buffers为空" % v_user.nickname)
+            logger.info("%s: buffers为空" % from_user.nickname)
             return False
 
         # while not buffers:
         #     buffers = self.wechat_client.get_packaget_by_seq(seq)
 
         if ord(buffers[16]) != 191:
-            logger.info("%s: 微信返回错误" % v_user.nickname)
+            logger.info("%s: 微信返回错误" % from_user.nickname)
             # self.wechat_client.close_when_done()
             return False
 

@@ -22,12 +22,25 @@ logger = logging.getLogger('django_views')
 
 
 class SendMsgView(View):
+    """
+    接口： http://s-prod-04.qunzhu666.com:10024/robot/send_msg/
+    格式:
+        {
+            "md_username": "",
+            "data": ["http:", "<appmsg...", "text", ...]
+        }
+    """
     @csrf_exempt
     def post(self, request):
         req_dict = json.loads(request.body)
         md_username = req_dict.get("md_username", "")
 
+        if not md_username:
+            return HttpResponse(json.dumps({"ret": 0, "reason": "sendMsg md_username不能为空"}))
+
         data = req_dict.get("data", "")
+        if not data:
+            return HttpResponse(json.dumps({"ret": 0, "reason": "待发送数据为空"}))
 
         wxuser_list = WxUser.objects.filter(user__username=md_username, login=1, is_customer_server=False)
         for wxuser in wxuser_list:
@@ -110,7 +123,7 @@ class RemoveProductionChatroom(View):
     def post(self, request):
         """
         移除生产群
-        接口: http://s-prod-04.qunzhu666.com:10024/robot/add_production_chatroom
+        接口: http://s-prod-04.qunzhu666.com:10024/robot/add_production_chatroom/
         本地: localhost:10024/robot/remove_production_chatroom/
         """
         req_dict = json.loads(request.body)

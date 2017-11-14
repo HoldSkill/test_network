@@ -1,8 +1,10 @@
 # 接口文档
 
+
 ## 基本接口
 
     1. getqrcode
+        获取二维码
         方法： POST
         参数： 
             {
@@ -12,6 +14,7 @@
         url: http://s-prod-04.qunzhu666.com:10024/robot/getqrcode/
     2. host_list
         获取群列表的接口以及参数未变，但返回值发生改变
+        url: http://s-prod-04.qunzhu666.com:10024/robot/host_list?username=136xxx
         {
             "data":[
                 {
@@ -63,11 +66,20 @@
                 "platform_id": 
             }
         url: http://s-prod-04.qunzhu666.com:10024/robot/define_sign_rule/
+    5. 获取登录了该平台所有机器人的列表
+    url: http://s-prod-04.qunzhu666.com:10024/robot/platform_user_list?platform_id=xxx
+    返回值: 
+        {
+            "login_user_list":[
+                    {"user": "smart", "wxuser_list": ["樂阳", "渺渺的"]}，
+                    {"user": "keyerror", ......}
+            ]
+        }
 
 ## 功能接口
 
     1. 向该平台所有已登录用户的生产群发送消息：
-        url: http://s-prod-04.qunzhu666.com:10024/robot.send_msg/
+        url: http://s-prod-04.qunzhu666.com:10024/robot/send_msg/
         方法: POST
         参数： 
             {
@@ -75,4 +87,3 @@
                 "data": ["http://xxx", "https://xxx", "text", "http://xxx"]
             }
     2. 后台url地址
-        url: http://s-prod-04.qunzhu666.com:10024/maxwell/admin
