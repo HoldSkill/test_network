@@ -63,6 +63,7 @@ class SendMsgView(View):
 
 class PlatformUserList(View):
     """
+    接口: http://s-prod-04.qunzhu666.com:10024/robot/platform_user_list?platform_id=xxx
     筛选登录了该平台所有的用户，返回手机号以及对应的机器人列表
     """
     def get(self, request):
@@ -135,7 +136,6 @@ class RemoveProductionChatroom(View):
             chatroom_db.is_send = False
             chatroom_db.save()
         return HttpResponse(json.dumps({"ret": 1, "reason": "删除生产群成功"}))
-
 
 
 class DefineSignRule(View):

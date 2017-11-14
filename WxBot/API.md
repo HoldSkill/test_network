@@ -1,6 +1,9 @@
 # 接口文档
 
-
+芙蓉兴盛： 
+    platform_id: frxs
+怡亚通：
+    platform_id: star_chain
 ## 基本接口
 
     1. getqrcode

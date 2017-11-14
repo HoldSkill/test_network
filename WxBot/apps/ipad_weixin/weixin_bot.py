@@ -962,13 +962,18 @@ class WXBot(object):
         data = data + random_str
 
         # 图片压缩
-        max_length = 109226
+        max_length = 250000
         if len(data) > max_length:
             img = Image.open(BytesIO(data))
             img_buffer = BytesIO()
-            quality_rate = 55
+            quality_rate = 40
             img.save(img_buffer, 'JPEG', quality=quality_rate)
             data = img_buffer.getvalue()
+
+        # 如果压缩后的图片仍然非常大，超过25次，则放弃改图片的发送
+        if len(data) / 16553 > 25:
+            self.wechat_client.close_when_done()
+            return False
 
         # 起始位置
         start_pos = 0
@@ -1045,7 +1050,7 @@ class WXBot(object):
             start_pos = start_pos + count
             send_num += 1
         self.wechat_client.close_when_done()
-        # return True
+        return True
 
     def retry_send_img(self, img_msg_req):
         img_msg_rsp = grpc_client.send(img_msg_req)
