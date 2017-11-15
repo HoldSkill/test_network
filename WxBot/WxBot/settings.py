@@ -45,13 +45,13 @@ INSTALLED_APPS = [
     'ipad_weixin',
     'xadmin',
     'crispy_forms',
-    'corsheaders'
+    'corsheaders' # 跨域解决方案
 ]
 
 MIDDLEWARE_CLASSES = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',   # 跨域解决方案
     'django.middleware.common.CommonMiddleware',
     # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -155,6 +155,8 @@ USE_L10N = True
 
 USE_TZ = True
 
+
+# 跨域解决方案
 CORS_ORIGIN_ALLOW_ALL = True
 
 CORS_ALLOW_CREDENTIALS = True
@@ -191,7 +193,7 @@ CORS_ALLOW_HEADERS = (
 STATIC_URL = '/static/'
 
 # 服务器
-# STATIC_ROOT = '/home/wxbot/static'
+STATIC_ROOT = '/home/nginx_tornado_deploy/static/'
 
 # 本地测试
 # STATIC_ROOT = '/var/www/nginx_tornado_deploy/static/'
