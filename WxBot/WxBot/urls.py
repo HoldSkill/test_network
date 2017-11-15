@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
 
-from ipad_weixin.views.base_views import GetQrcode, HostList, IsUuidLogin, IsLogin, \
+from ipad_weixin.views.base_views import GetQrcode, HostList, IsUuidLogin, \
      AddSuperUser, ResetSingleHeartBeat, ResetHeartBeat
 from ipad_weixin.views.function_views import SendMsgView, PlatformUserList, AddProductionChatroom, \
     RemoveProductionChatroom, DefineSignRule
@@ -26,7 +26,6 @@ import xadmin
 robot_urls = [
     url(r'getqrcode', GetQrcode.as_view()),
     url(r'host_list', HostList.as_view()),
-    url(r'is_login', IsLogin.as_view()),
     url(r'is_uuid_login', IsUuidLogin.as_view()),
     url(r'add_super_user', AddSuperUser.as_view()),
 
@@ -49,5 +48,7 @@ xadmin_urls = [
 urlpatterns = [
     url(r'^91191b7a3172/', include(xadmin_urls)),
     url(r'^robot/', include(robot_urls)),
-] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+]
+
+# + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 

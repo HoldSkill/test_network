@@ -102,7 +102,6 @@ class AddProductionChatroom(View):
         数据类型：josn
         格式：
         {
-            "md_username": "smart"
             "chatroom_list": ["chatroom.username",......]
         }
         接口: http://s-prod-04.qunzhu666.com:10024/robot/add_production_chatroom/

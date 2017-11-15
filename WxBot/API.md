@@ -46,7 +46,6 @@
         方法： POST
         参数：
             {
-                "md_username": "136xxx"
                 "chatroom_list": ["chatroom.username",......]
                 注： chatroom.username == "xxx@chatroom"
             }
@@ -55,7 +54,6 @@
         方法： POST
         参数：
             {
-                "md_username": "136xxx"
                 "chatroom_list": ["chatroom.username",......]
                 注： chatroom.username == "xxx@chatroom"
             }

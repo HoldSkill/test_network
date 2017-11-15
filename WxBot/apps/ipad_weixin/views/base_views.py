@@ -88,36 +88,6 @@ class HostList(View):
         return HttpResponse(json.dumps(response_data))
 
 
-class IsLogin(View):
-    """
-    接口： http://s-prod-04.quinzhu666.com:8080/robot/is_login?username=md_username
-    """
-    def get(self, request):
-        username = request.GET.get('username', '')
-        if 'username' == '':
-            response_data = {"ret": str(0), "name": "未登录"}
-            return HttpResponse(json.dumps(response_data))
-        ret = 0
-        name = ''
-        try:
-            qr_code_db = Qrcode.objects.filter(md_username=username, username__isnull=False).order_by('-id').first()
-            wx_username = qr_code_db.username
-            print(wx_username)
-
-            # 筛选出wx用户昵称
-            wxuser = WxUser.objects.filter(username=wx_username).order_by('-id').first()
-            ret = wxuser.login
-            name = wxuser.nickname
-
-            print(name.encode('utf8'))
-        except Exception as e:
-            logger.error(e)
-            print(e)
-
-        response_data = {"ret": str(ret), "name": name}
-        return HttpResponse(json.dumps(response_data))
-
-
 class IsUuidLogin(View):
     """
     检测该UUID是否被扫描登陆
