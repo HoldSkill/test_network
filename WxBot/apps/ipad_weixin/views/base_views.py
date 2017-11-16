@@ -23,7 +23,7 @@ logger = logging.getLogger('django_views')
 
 class GetQrcode(View):
     """
-    接口： http://s-prod-04.quinzhu666.com：8080/robot/getqrcode/
+    接口： http://s-prod-04.quinzhu666.com：10024/robot/getqrcode/
     格式：
         {
             "md_username": "smart",
@@ -57,7 +57,7 @@ class GetQrcode(View):
 class HostList(View):
     """
     返回用户所有的群组以及生产群
-    接口： http://s-prod-04.quinzhu666.com:8080/robot/host_list?md_username=md_username
+    接口： http://s-prod-04.quinzhu666.com:10024/robot/host_list?md_username=
     """
     def get(self, request):
         username = request.GET.get('md_username', '')
@@ -92,7 +92,7 @@ class HostList(View):
 class IsUuidLogin(View):
     """
     检测该UUID是否被扫描登陆
-    http://s-prod-04.qunzhu666.com:8080/robot/is_uuid_login?uuid=gZF8miqrkksZ9mrRk7mc
+    http://s-prod-04.qunzhu666.com:10024/robot/is_uuid_login?uuid=
     """
     def get(self, request):
         uuid = request.GET.get('uuid', '')
@@ -124,7 +124,7 @@ class IsUuidLogin(View):
 class ResetHeartBeat(View):
     """
     此方法只能在重启supervisor服务时使用，系统运行时严禁使用该接口
-    http://s-prod-04.qunzhu666.com:8080/robot/reset_heart_beat
+    http://s-prod-04.qunzhu666.com:10024/robot/ed0050a7a7c9/reset_heart_beat
     """
     def get(self, request):
         auth_users = WxUser.objects.filter(last_heart_beat__gt=timezone.now() - datetime.timedelta(minutes=300))
@@ -142,10 +142,13 @@ class ResetHeartBeat(View):
 class ResetSingleHeartBeat(View):
     """
     开启单个用户心跳
-    接口： http://s-prod-04.qunzhu666.com:8080/reset_single?username=wx_id
+    接口： http://s-prod-04.qunzhu666.com:10024/reset_single?wx_id=wx_id
     """
     def get(self, request):
-        username = request.GET.get('md_username')
+        username = request.GET.get('wx_id', "")
+        if not username:
+            return HttpResponse(json.dumps({"ret": 0, "reason": "wx_id不能为空"}))
+
         v_user_pickle = red.get('v_user_' + username)
         v_user = pickle.loads(v_user_pickle)
         if v_user:

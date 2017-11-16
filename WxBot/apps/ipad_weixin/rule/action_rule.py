@@ -20,7 +20,10 @@ logger = logging.getLogger('weixin_bot')
 
 def filter_keyword_rule(wx_id, msg_dict):
     keyword = find_buy_start(msg_dict['Content'])
-    if keyword and keyword is not '':
+
+    if keyword and keyword is not '' or "我剁手都要" in msg_dict['Content']:
+        if "我剁手都要" in msg_dict['Content']:
+            keyword = msg_dict['Content']
         customer_service_list = WxUser.objects.filter(username=wx_id, is_customer_server=True)
         if wx_id in [wx_user.username for wx_user in customer_service_list]:
             return
@@ -57,7 +60,7 @@ def filter_keyword_rule(wx_id, msg_dict):
                     "keyword": keyword,
                     "platform_id": platform_id
                 }
-                # 该平台所对应处理搜索View的url  http://localhost:8000/product/search_product/
+                # 该平台所对应处理搜索View的url
                 host_url = PlatformInformation.objects.get(platform_id=platform_id, is_customer_server=False).host_url
                 response = requests.post(host_url, data=json.dumps(request_data))
                 response_dict = json.loads(response.content)
@@ -97,3 +100,6 @@ if __name__ == "__main__":
     wx_id = 'wxid_ozdmesmnpy5g22'
     filter_keyword_rule(wx_id, msg_dict)
 
+"""
+u'wxid_fykxqh566gxh22:\n【我剁手都要买的宝贝（达尔优LM101游戏鼠标有线牧马人USB台式机电脑笔记本家用办公女生），快来和我一起瓜分红I包】http://a.npupu.com/h.wKS7ig 点击链接，再选择浏览器打开；或复制这条信息￥gkpP0SRzFYr￥后打开👉手淘👈'
+"""
