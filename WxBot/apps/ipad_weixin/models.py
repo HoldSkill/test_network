@@ -249,7 +249,7 @@ class Wxuser_Chatroom(models.Model):
     wxuser = models.ForeignKey(WxUser)
     chatroom = models.ForeignKey(ChatRoom)
     is_send = models.BooleanField(default=False)
-
+    is_search = models.BooleanField(default=False)
     class Meta:
         verbose_name = "群-WxUser关系"
         verbose_name_plural = verbose_name

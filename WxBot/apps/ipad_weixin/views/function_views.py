@@ -110,16 +110,19 @@ class AddProductionChatroom(View):
         接口: http://s-prod-04.qunzhu666.com:10024/robot/add_production_chatroom/
         本地: localhost:10024/robot/add_production_chatroom/
         """
+        # TODO: 使用wx_id来作为筛选条件，而不是md_username
         req_dict = json.loads(request.body)
         chatroom_list = req_dict["chatroom_list"]
-        username = req_dict["md_username"]
+        wx_username = req_dict["wx_username"]
         if not chatroom_list:
             return HttpResponse(json.dumps({"ret": 0, "reason": "chatroom_list为空"}))
         for chatroom_username in chatroom_list:
             wxuser_chatroom = Wxuser_Chatroom.objects.get(
-                chatroom__username=chatroom_username, wxuser__user__username=username
+                chatroom__username=chatroom_username, wxuser__username=wx_username
             )
+
             wxuser_chatroom.is_send = True
+            wxuser_chatroom.is_search = True
             wxuser_chatroom.save()
         return HttpResponse(json.dumps({"ret": 1, "reason": "添加生产群成功"}))
 
@@ -134,12 +137,12 @@ class RemoveProductionChatroom(View):
         """
         req_dict = json.loads(request.body)
         chatroom_list = req_dict["chatroom_list"]
-        username = req_dict["md_username"]
+        wx_username = req_dict["wx_username"]
         if not chatroom_list:
             return HttpResponse(json.dumps({"ret": 0, "reason": "chatroom_list为空"}))
         for chatroom_username in chatroom_list:
             wxuser_chatroom = Wxuser_Chatroom.objects.get(
-                chatroom__username=chatroom_username, wxuser__user__username=username
+                chatroom__username=chatroom_username, wxuser__username=wx_username
             )
             wxuser_chatroom.is_send = False
             wxuser_chatroom.save()

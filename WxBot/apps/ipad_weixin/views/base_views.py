@@ -71,6 +71,7 @@ class HostList(View):
                 production_chatroom_list = []
                 ret = wxuser.login
                 name = wxuser.nickname
+                wx_username = wxuser.username
                 chatroom_list = ChatRoom.objects.filter(wxuser__username=wxuser.username)
                 for chatroom in chatroom_list:
                     robot_chatroom_list.append({"nickname": chatroom.nickname,
@@ -80,6 +81,7 @@ class HostList(View):
                         production_chatroom_list.append({"nickname": chatroom.nickname,
                                                          "username": chatroom.username})
                 data.append({"ret": ret, "name": name,
+                             "wx_username": wx_username,
                              "group": robot_chatroom_list,
                              "production_list": production_chatroom_list})
         except Exception as e:

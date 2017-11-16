@@ -21,7 +21,7 @@ logger = logging.getLogger('weixin_bot')
 def filter_keyword_rule(wx_id, msg_dict):
     keyword = find_buy_start(msg_dict['Content'])
 
-    if keyword and keyword is not '' or "我剁手都要" in msg_dict['Content']:
+    if (keyword and keyword is not '') or ("我剁手都要" in msg_dict['Content']):
         if "我剁手都要" in msg_dict['Content']:
             keyword = msg_dict['Content']
         customer_service_list = WxUser.objects.filter(username=wx_id, is_customer_server=True)
@@ -44,7 +44,7 @@ def filter_keyword_rule(wx_id, msg_dict):
             at_user_db = ChatroomMember.objects.filter(username=at_user_id).first()
             at_user_nickname = '@' + at_user_db.nickname
 
-        chatroom = ChatRoom.objects.filter(wxuser_chatroom__is_send=True, username=gid).first()
+        chatroom = ChatRoom.objects.filter(wxuser_chatroom__is_search=True, username=gid).first()
         if chatroom:
             try:
                 # TODO: filter条件问题，是否会出现username ==null的情况
