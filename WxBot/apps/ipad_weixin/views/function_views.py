@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 
 from ipad_weixin.weixin_bot import WXBot
-from ipad_weixin.models import Qrcode, WxUser, ChatRoom, SignInRule, PushRecord, PlatformInformation
+from ipad_weixin.models import Qrcode, WxUser, ChatRoom, SignInRule, PushRecord, PlatformInformation, Wxuser_Chatroom
 from ipad_weixin.heartbeat_manager import HeartBeatManager
 from ipad_weixin.send_msg_type import sendMsg
 from ipad_weixin.utils.oss_utils import beary_chat
@@ -43,8 +43,10 @@ class SendMsgView(View):
             return HttpResponse(json.dumps({"ret": 0, "reason": "待发送数据为空"}))
 
         wxuser_list = WxUser.objects.filter(user__username=md_username, login=1, is_customer_server=False)
+        if not wxuser_list:
+            return HttpResponse(json.dumps({"ret": 0, "reason": "wxuser_list 为空"}))
         for wxuser in wxuser_list:
-            chatroom_list = ChatRoom.objects.filter(wx_user=wxuser, is_send=True)
+            chatroom_list = ChatRoom.objects.filter(wxuser=wxuser, wxuser_chatroom__is_send=True)
             if not chatroom_list:
                 platform_id = User.objects.get(username=md_username).first_name
                 beary_chat("平台：%s, %s 生产群为空" % (platform_id, wxuser.nickname))
@@ -102,6 +104,7 @@ class AddProductionChatroom(View):
         数据类型：josn
         格式：
         {
+            "md_username": "136xxx"
             "chatroom_list": ["chatroom.username",......]
         }
         接口: http://s-prod-04.qunzhu666.com:10024/robot/add_production_chatroom/
@@ -109,12 +112,15 @@ class AddProductionChatroom(View):
         """
         req_dict = json.loads(request.body)
         chatroom_list = req_dict["chatroom_list"]
+        username = req_dict["md_username"]
         if not chatroom_list:
             return HttpResponse(json.dumps({"ret": 0, "reason": "chatroom_list为空"}))
         for chatroom_username in chatroom_list:
-            chatroom_db = ChatRoom.objects.get(username=chatroom_username)
-            chatroom_db.is_send = True
-            chatroom_db.save()
+            wxuser_chatroom = Wxuser_Chatroom.objects.get(
+                chatroom__username=chatroom_username, wxuser__user__username=username
+            )
+            wxuser_chatroom.is_send = True
+            wxuser_chatroom.save()
         return HttpResponse(json.dumps({"ret": 1, "reason": "添加生产群成功"}))
 
 
@@ -128,12 +134,16 @@ class RemoveProductionChatroom(View):
         """
         req_dict = json.loads(request.body)
         chatroom_list = req_dict["chatroom_list"]
+        username = req_dict["md_username"]
         if not chatroom_list:
             return HttpResponse(json.dumps({"ret": 0, "reason": "chatroom_list为空"}))
         for chatroom_username in chatroom_list:
-            chatroom_db = ChatRoom.objects.get(username=chatroom_username)
-            chatroom_db.is_send = False
-            chatroom_db.save()
+            wxuser_chatroom = Wxuser_Chatroom.objects.get(
+                chatroom__username=chatroom_username, wxuser__user__username=username
+            )
+            wxuser_chatroom.is_send = False
+            wxuser_chatroom.save()
+
         return HttpResponse(json.dumps({"ret": 1, "reason": "删除生产群成功"}))
 
 
@@ -160,7 +170,7 @@ class DefineSignRule(View):
         wx_user = WxUser.objects.filter(user__username=md_username).first()
 
         # 只有在生产群才能够添加签到规则
-        chatroom_list = ChatRoom.objects.filter(wx_user__username=wx_user.username, is_send=True)
+        chatroom_list = ChatRoom.objects.filter(wxuser__username=wx_user.username, wxuser_chatroom__is_send=True)
         if not chatroom_list:
             return HttpResponse(json.dumps({"ret": 0, "reason": "生产群为空"}))
         sign_rule = SignInRule()

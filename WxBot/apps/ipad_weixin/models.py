@@ -215,9 +215,13 @@ class ChatRoom(models.Model):
     alias = models.CharField(max_length=100)
     chat_room_owner = models.CharField(max_length=200, verbose_name=u"群主ID")
     chat_room_version = models.CharField(max_length=50, default='')
-    wx_user = models.ManyToManyField(WxUser, verbose_name=u"微信ID")
     member_nums = models.IntegerField(default=0, verbose_name=u"群成员数量")
-    is_send = models.BooleanField(default=False, verbose_name=u"是否为生产群")
+
+    wxuser = models.ManyToManyField(
+        WxUser, verbose_name=u"微信ID",
+        through='Wxuser_Chatroom',
+        through_fields=('chatroom', 'wxuser')
+    )
 
 
     def update_from_msg_dict(self, msg_dict):
@@ -239,6 +243,12 @@ class ChatRoom(models.Model):
     class Meta:
         verbose_name = "微信群"
         verbose_name_plural = verbose_name
+
+
+class Wxuser_Chatroom(models.Model):
+    wxuser = models.ForeignKey(WxUser)
+    chatroom = models.ForeignKey(ChatRoom)
+    is_send = models.BooleanField(default=False)
 
 
 class ChatroomMember(models.Model):

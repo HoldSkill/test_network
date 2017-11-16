@@ -99,28 +99,28 @@ CACHES = {
 }
 
 # 测试服务器
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'OPTIONS': {'charset': 'utf8mb4'},
-        'NAME': 'wxbot',
-        'USER': 'root',
-        'PASSWORD': 'Xiaozuanfeng',
-        'HOST': 's-prod-02.qunzhu666.com',
-        'PORT': '50001',
-    }
-}
-
-
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.mysql',
 #         'OPTIONS': {'charset': 'utf8mb4'},
-#         'NAME': 'weixinbot',
+#         'NAME': 'wxbot',
 #         'USER': 'root',
-#         'PASSWORD': 'keyerror',
+#         'PASSWORD': 'Xiaozuanfeng',
+#         'HOST': 's-prod-02.qunzhu666.com',
+#         'PORT': '50001',
 #     }
 # }
+
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'OPTIONS': {'charset': 'utf8mb4'},
+        'NAME': 'weixinbot',
+        'USER': 'root',
+        'PASSWORD': 'keyerror',
+    }
+}
 
 
 # Password validation
@@ -193,10 +193,10 @@ CORS_ALLOW_HEADERS = (
 STATIC_URL = '/static/'
 
 # 服务器
-STATIC_ROOT = '/home/nginx_tornado_deploy/static/'
+# STATIC_ROOT = '/home/nginx_tornado_deploy/static/'
 
 # 本地测试
-# STATIC_ROOT = '/var/www/nginx_tornado_deploy/static/'
+STATIC_ROOT = '/var/www/nginx_tornado_deploy/static/'
 
 
 APPEND_SLASH = False

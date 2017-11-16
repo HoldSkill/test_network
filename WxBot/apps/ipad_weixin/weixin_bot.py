@@ -41,7 +41,7 @@ from ipad_weixin.rule import action_rule
 
 from django.contrib.auth.models import User as AuthUser
 from ipad_weixin.models import WxUser, Contact, Message, Qrcode, BotParam, Img, ChatRoom, \
-    ChatroomMember
+    ChatroomMember, Wxuser_Chatroom
 
 
 import logging
@@ -688,7 +688,7 @@ class WXBot(object):
                                     chatroom.chat_room_owner = chatroom_owner
                                     chatroom.save()
 
-                                if not ChatRoom.objects.filter(wx_user__username=v_user.userame, username=chatroom_name) \
+                                if not ChatRoom.objects.filter(wxuser__username=v_user.userame, username=chatroom_name) \
                                         or not chatroom.nickname:
                                     self.get_and_update_chatroom(v_user, chatroom_name, chatroom)
                                 else:
@@ -780,14 +780,12 @@ class WXBot(object):
                 if msg_dict['MsgType'] == 2:
                     try:
                         if '@chatroom' in msg_dict['UserName']:
-                            # 在多对多关系中，通过chatroom.wx_user.add('wx_user_id')来存储关系，
-                            # 而且，chatroom这个实例必须要先保存至数据库中
+                            #
                             chatroom, created = ChatRoom.objects.get_or_create(username=msg_dict['UserName'])
                             chatroom.update_from_msg_dict(msg_dict)
                             chatroom.save()
 
-                            chatroom.wx_user.add(wx_user.id)
-                            chatroom.save()
+                            Wxuser_Chatroom.objects.get_or_create(chatroom=chatroom, wxuser=wx_user)
 
                             if created:
                                 chatroom_members_details = self.get_chatroom_detail(v_user, msg_dict['UserName'])
@@ -1098,16 +1096,16 @@ class WXBot(object):
         print(payloads)
 
     def get_and_update_chatroom(self, v_user, chatroom_name, chatroom):
-        group_members_details = self.get_chatroom_detail(v_user,chatroom_name.encode('utf-8'))
+        group_members_details = self.get_chatroom_detail(v_user, chatroom_name.encode('utf-8'))
         # 获取群组的整体信息
         chatroom_details = self.get_contact(v_user, chatroom_name.encode('utf-8'))
         chatroom.update_from_msg_dict(chatroom_details[0])
         chatroom.member_nums = len(group_members_details)
-        chatroom.save()
 
         wx_user = WxUser.objects.get(username=v_user.userame)
-        chatroom.wx_user.add(wx_user.id)
         chatroom.save()
+
+        Wxuser_Chatroom.objects.get_or_create(chatroom=chatroom, wxuser=wx_user)
 
         for members_dict in group_members_details:
             group_member = ChatroomMember()

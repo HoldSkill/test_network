@@ -12,7 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
 from ipad_weixin.weixin_bot import WXBot
-from ipad_weixin.models import Qrcode, WxUser, ChatRoom, SignInRule, PlatformInformation
+from ipad_weixin.models import Qrcode, WxUser, ChatRoom, SignInRule, PlatformInformation, Wxuser_Chatroom
 from ipad_weixin.heartbeat_manager import HeartBeatManager
 from ipad_weixin.settings import red
 from ipad_weixin.utils import oss_utils
@@ -26,14 +26,14 @@ class GetQrcode(View):
     接口： http://s-prod-04.quinzhu666.com：8080/robot/getqrcode/
     格式：
         {
-            "username": "smart",
+            "md_username": "smart",
             "platform_id": ""
         }
     """
     @csrf_exempt
     def post(self, request):
         req_dict = json.loads(request.body)
-        md_username = req_dict.get('username', '')
+        md_username = req_dict.get('md_username', '')
         platform_id = req_dict.get('platform_id', '')
 
         if not md_username:
@@ -57,10 +57,10 @@ class GetQrcode(View):
 class HostList(View):
     """
     返回用户所有的群组以及生产群
-    接口： http://s-prod-04.quinzhu666.com:8080/robot/host_list?username=md_username
+    接口： http://s-prod-04.quinzhu666.com:8080/robot/host_list?md_username=md_username
     """
     def get(self, request):
-        username = request.GET.get('username', '')
+        username = request.GET.get('md_username', '')
         if not username:
             return HttpResponse(json.dumps({"ret": 0, "reason": "username不允许为空"}))
         data = []
@@ -71,11 +71,12 @@ class HostList(View):
                 production_chatroom_list = []
                 ret = wxuser.login
                 name = wxuser.nickname
-                chatroom_list = ChatRoom.objects.filter(wx_user__username=wxuser.username)
+                chatroom_list = ChatRoom.objects.filter(wxuser__username=wxuser.username)
                 for chatroom in chatroom_list:
                     robot_chatroom_list.append({"nickname": chatroom.nickname,
                                                 "username": chatroom.username})
-                    if chatroom.is_send:
+                    wxuser_chatroom = Wxuser_Chatroom.objects.get(wxuser=wxuser, chatroom=chatroom)
+                    if wxuser_chatroom.is_send:
                         production_chatroom_list.append({"nickname": chatroom.nickname,
                                                          "username": chatroom.username})
                 data.append({"ret": ret, "name": name,
@@ -144,7 +145,7 @@ class ResetSingleHeartBeat(View):
     接口： http://s-prod-04.qunzhu666.com:8080/reset_single?username=wx_id
     """
     def get(self, request):
-        username = request.GET.get('username')
+        username = request.GET.get('md_username')
         v_user_pickle = red.get('v_user_' + username)
         v_user = pickle.loads(v_user_pickle)
         if v_user:

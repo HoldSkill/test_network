@@ -29,7 +29,7 @@ robot_urls = [
     url(r'is_uuid_login', IsUuidLogin.as_view()),
     url(r'add_super_user', AddSuperUser.as_view()),
 
-    url(r'reset_heart_beat', ResetHeartBeat.as_view()),
+    url(r'ed0050a7a7c9/reset_heart_beat', ResetHeartBeat.as_view()),
     url(r'reset_single', ResetSingleHeartBeat.as_view()),
 
     url(r'define_sign_rule', DefineSignRule.as_view()),

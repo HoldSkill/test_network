@@ -41,7 +41,7 @@ def filter_keyword_rule(wx_id, msg_dict):
             at_user_db = ChatroomMember.objects.filter(username=at_user_id).first()
             at_user_nickname = '@' + at_user_db.nickname
 
-        chatroom = ChatRoom.objects.filter(is_send=True, username=gid).first()
+        chatroom = ChatRoom.objects.filter(wxuser_chatroom__is_send=True, username=gid).first()
         if chatroom:
             try:
                 # TODO: filter条件问题，是否会出现username ==null的情况
