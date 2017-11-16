@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from ipad_weixin.models import SignInRule, WxUser, ChatRoom, PlatformInformation
+from ipad_weixin.models import SignInRule, WxUser, ChatRoom, PlatformInformation, Wxuser_Chatroom
 import xadmin
 from xadmin import views
 
@@ -20,7 +20,7 @@ xadmin.site.register(views.CommAdminView, GlobalSettings)
 
 class SignRuleAdmin(object):
     list_display = ['keyword', 'red_packet_id', 'created', 'chatroom']
-    search_fields = ['chatroom__nickname']
+    search_fields = ['chatroom__nickname', 'keyword', 'red_packet_id']
 xadmin.site.register(SignInRule, SignRuleAdmin)
 
 
@@ -33,12 +33,17 @@ xadmin.site.register(WxUser, WxUserAdmin)
 
 
 class ChatroomAdmin(object):
-    list_display = ['nickname', 'username', 'wx_user', 'is_send', 'member_nums']
-    search_fields = ['nickname', 'wx_user__nickname']
-    list_filter = ['nickname', 'wx_user', 'username']
+    list_display = ['nickname', 'username', 'wxuser', 'member_nums']
+    search_fields = ['nickname', 'wxuser__nickname', 'username']
+    list_filter = ['nickname', 'wxuser', 'username']
 xadmin.site.register(ChatRoom, ChatroomAdmin)
 
 
-class PlatformInformationAdmin(object):
-    list_display = ['platform_id', 'host_url', 'red_packet_id']
-    list_editable = ['platform_id', 'host_url', 'red_packet_id']
+class WxuserChatroomAdmin(object):
+    list_display = ['is_send', 'wxuser', 'chatroom']
+    search_fields = ['wxuser__nickname', 'chatroom__nickname']
+    list_filter = ['is_send']
+
+xadmin.site.register(Wxuser_Chatroom, WxuserChatroomAdmin)
+
+

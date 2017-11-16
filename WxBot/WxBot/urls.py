@@ -41,7 +41,7 @@ robot_urls = [
 ]
 
 xadmin_urls = [
-    url(r'maxwell_admin', xadmin.site.urls)
+    url(r'maxwell_admin/', xadmin.site.urls)
 ]
 
 

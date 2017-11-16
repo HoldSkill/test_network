@@ -250,6 +250,13 @@ class Wxuser_Chatroom(models.Model):
     chatroom = models.ForeignKey(ChatRoom)
     is_send = models.BooleanField(default=False)
 
+    class Meta:
+        verbose_name = "群-WxUser关系"
+        verbose_name_plural = verbose_name
+
+    def __unicode__(self):
+        return ("%s-%s" %(self.wxuser, self.chatroom))
+
 
 class ChatroomMember(models.Model):
     username = models.CharField(max_length=100)
