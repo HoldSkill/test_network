@@ -688,15 +688,18 @@ class WXBot(object):
                                     chatroom.chat_room_owner = chatroom_owner
                                     chatroom.save()
 
+                                # 触发规则是什么？
+                                # 群与wxuser没有建立联系，群昵称为空，群成员为空
                                 if not ChatRoom.objects.filter(wxuser__username=v_user.userame, username=chatroom_name) \
-                                        or not chatroom.nickname:
+                                        or not chatroom.nickname or not chatroom.chatroommember_set.all():
                                     self.get_and_update_chatroom(v_user, chatroom_name, chatroom)
                                 else:
                                     # 该群存在, 则可能是更改群名称、拉/踢人等。
                                     if msg_dict['Status'] == 4:
                                         self.update_chatroom_members(chatroom_name, v_user)
                                         # TODO: 目前存在某些问题，待解决。
-                                        if u"邀请" in msg_dict['Content']:
+                                        if u"邀请" in msg_dict['Content'] and \
+                                                Wxuser_Chatroom.objects.get(chatroom=chatroom, wxuser__username=v_user.userame).is_send:
                                             self.send_invited_message(msg_dict, v_user)
 
                             try:
@@ -720,7 +723,7 @@ class WXBot(object):
             chatroom_member = ChatroomMember.objects.filter(nickname=invited_nickname).first()
             invited_member_id = chatroom_member.username
 
-            message = "@" + invited_nickname + "\\n 啊哈，欢迎你的到来~"
+            message = "@" + invited_nickname + "\\n 嘿嘿，欢迎你的加入~[机智][机智]"
             self.send_text_msg(msg_dict['FromUserName'], message, v_user, at_user_id=invited_member_id)
 
     def new_init(self, v_user, md_username, platform_id):
@@ -790,7 +793,12 @@ class WXBot(object):
                             if created:
                                 chatroom_members_details = self.get_chatroom_detail(v_user, msg_dict['UserName'])
                                 for members_dict in chatroom_members_details:
-                                    chatroom_member = ChatroomMember()
+                                    # TODO: 当用户被移除群后，这里应该是删除关系，而非添加额外的实体字段
+                                    """
+                                    members_dict["Username"]是唯一的
+                                    """
+                                    # 保证实体的唯一性
+                                    chatroom_member, created = ChatroomMember.objects.get_or_create(username=members_dict["Username"])
                                     chatroom_member.update_from_members_dict(members_dict)
                                     chatroom_member.save()
 
@@ -1108,45 +1116,54 @@ class WXBot(object):
         Wxuser_Chatroom.objects.get_or_create(chatroom=chatroom, wxuser=wx_user)
 
         for members_dict in group_members_details:
-            group_member = ChatroomMember()
-            group_member.update_from_members_dict(members_dict)
-            group_member.save()
+            chatroom_member, created = ChatroomMember.objects.get_or_create(username=members_dict["Username"])
+            chatroom_member.update_from_members_dict(members_dict)
+            chatroom_member.save()
 
-            group_member.chatroom.add(chatroom.id)
-            group_member.save()
+            chatroom_member.chatroom.add(chatroom)
+            chatroom_member.save()
 
     def update_chatroom_members(self, chatroom_name, v_user):
 
         chatroom = ChatRoom.objects.get(username=chatroom_name)
-        members_db = ChatroomMember.objects.filter(chatroom__username=chatroom_name, is_delete=False)
+        members_db = ChatroomMember.objects.filter(chatroom__username=chatroom_name)
         old_members_list = [member.username for member in members_db]
+
+        # 该函数得到的是一个list，list中为dict，保存着群成员的信息
         group_members_details = self.get_chatroom_detail(v_user, chatroom_name)
+
         new_members_list = [member['Username'] for member in group_members_details]
 
         # 踢人
         delete_members = set(old_members_list) - set(new_members_list)
         if delete_members:
             for delete_member in delete_members:
-                # 还得是这个群的
-                delete_member_db = ChatroomMember.objects.filter(username=delete_member,
-                                                                 chatroom__username=chatroom_name).first()
-                delete_member_db.is_delete = True
+                delete_member_db = ChatroomMember.objects.get(username=delete_member,
+                                                              chatroom__username=chatroom_name)
+                delete_member_db.chatroom.remove(chatroom)
                 delete_member_db.save()
+            # 然后更新群成员的数量
+            chatroom.member_nums = len(new_members_list)
+            chatroom.save()
 
         # 拉人
         add_members = set(new_members_list) - set(old_members_list)
         if add_members:
+            # 这里之所以用2层for循环嵌套是因为add_member仅仅是一个username,需要在group_members_details找到与之对应的dict，并进行更新
             for add_member in add_members:
                 for group_member in group_members_details:
                     if add_member == group_member['Username']:
-                        members_db = ChatroomMember()
+                        members_db, created = ChatroomMember.objects.get_or_create(username=group_member['Username'])
                         members_db.update_from_members_dict(group_member)
-                        members_db.is_delete = False
                         members_db.save()
 
-                        members_db.chatroom.add(chatroom.id)
+                        members_db.chatroom.add(chatroom)
                         members_db.save()
+                chatroom.member_nums = len(new_members_list)
+                chatroom.save()
+
         else:
+            # 修改群名称
             contact = self.get_contact(v_user, chatroom_name.encode('utf-8'))
             new_nickname = contact[0]['NickName']
             chatroom.nickname = new_nickname

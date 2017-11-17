@@ -264,14 +264,20 @@ class ChatroomMember(models.Model):
     small_head_img_url = models.URLField(default='')
     inviter_username = models.CharField(max_length=100, default='')
     created = models.DateTimeField(auto_now=True)
-    is_delete = models.BooleanField(default=False)
     chatroom = models.ManyToManyField(ChatRoom, db_index=True)
 
     def update_from_members_dict(self, members_dict):
-        self.username = members_dict['Username']
+        # self.username = members_dict['Username']
         self.nickname = members_dict['NickName']
         self.small_head_img_url = members_dict['SmallHeadImgUrl']
         self.inviter_username = members_dict['InviterUserName']
+
+    def __unicode__(self):
+        return self.nickname
+
+    class Meta:
+        verbose_name = "群成员"
+        verbose_name_plural = verbose_name
 
 
 class Message(models.Model):
