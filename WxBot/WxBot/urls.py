@@ -21,7 +21,7 @@ from django.conf.urls.static import static
 from ipad_weixin.views.base_views import GetQrcode, HostList, IsUuidLogin, \
      AddSuperUser, ResetSingleHeartBeat, ResetHeartBeat
 from ipad_weixin.views.function_views import SendMsgView, PlatformUserList, AddProductionChatroom, \
-    RemoveProductionChatroom, DefineSignRule, SendSearchTextView
+    RemoveProductionChatroom, DefineSignRule
 import xadmin
 robot_urls = [
     url(r'getqrcode', GetQrcode.as_view()),
@@ -39,7 +39,6 @@ robot_urls = [
     url(r'add_production_chatroom', AddProductionChatroom.as_view()),
     url(r'remove_production_chatroom', RemoveProductionChatroom.as_view()),
 
-    url(r'send_search_text', SendSearchTextView.as_view())
 ]
 
 xadmin_urls = [

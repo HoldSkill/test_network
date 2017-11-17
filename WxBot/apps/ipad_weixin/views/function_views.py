@@ -34,6 +34,7 @@ class SendMsgView(View):
     def post(self, request):
         req_dict = json.loads(request.body)
         md_username = req_dict.get("md_username", "")
+        is_search_text = req_dict.get("search_text", "")
 
         if not md_username:
             return HttpResponse(json.dumps({"ret": 0, "reason": "sendMsg md_username不能为空"}))
@@ -46,7 +47,11 @@ class SendMsgView(View):
         if not wxuser_list:
             return HttpResponse(json.dumps({"ret": 0, "reason": "wxuser_list 为空"}))
         for wxuser in wxuser_list:
-            chatroom_list = ChatRoom.objects.filter(wxuser=wxuser, wxuser_chatroom__is_send=True)
+            if is_search_text:
+                chatroom_list = ChatRoom.objects.filter(wxuser=wxuser, wxuser_chatroom__is_send=False,
+                                                        wxuser_chatroom__is_search=True)
+            else:
+                chatroom_list = ChatRoom.objects.filter(wxuser=wxuser, wxuser_chatroom__is_send=True)
             if not chatroom_list:
                 platform_id = User.objects.get(username=md_username).first_name
                 beary_chat("平台：%s, %s 生产群为空" % (platform_id, wxuser.nickname))
@@ -188,38 +193,7 @@ class DefineSignRule(View):
         return HttpResponse(json.dumps({"ret": 1, "reason": "添加红包口令成功"}))
 
 
-class SendSearchTextView(View):
-    @csrf_exempt
-    def post(self, request):
-        req_dict = json.loads(request.body)
-        md_username = req_dict.get("md_username", "")
 
-        if not md_username:
-            return HttpResponse(json.dumps({"ret": 0, "reason": "sendMsg md_username不能为空"}))
-
-        data = req_dict.get("data", "")
-        if not data:
-            return HttpResponse(json.dumps({"ret": 0, "reason": "待发送数据为空"}))
-
-        wxuser_list = WxUser.objects.filter(user__username=md_username, login=1, is_customer_server=False)
-        if not wxuser_list:
-            return HttpResponse(json.dumps({"ret": 0, "reason": "wxuser_list 为空"}))
-        for wxuser in wxuser_list:
-            chatroom_list = ChatRoom.objects.filter(wxuser=wxuser, wxuser_chatroom__is_search=True)
-            if not chatroom_list:
-                platform_id = User.objects.get(username=md_username).first_name
-                beary_chat("平台：%s, %s 生产群为空" % (platform_id, wxuser.nickname))
-                continue
-                # 这里如果直接返回的话，那么接下的wxuser将得不到处理
-                # return HttpResponse(json.dumps({"ret": 0, "data": "发单群为空"}))
-
-            for chatroom in chatroom_list:
-                # 一个群一个线程去处理
-                wx_id = wxuser.username
-                chatroom_id = chatroom.username
-                thread.start_new_thread(sendMsg, (wx_id, chatroom_id, data))
-
-        return HttpResponse(json.dumps({"ret": 1, "data": "处理完成"}))
 
 
 
