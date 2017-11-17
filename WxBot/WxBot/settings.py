@@ -112,15 +112,26 @@ CACHES = {
 # }
 
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'OPTIONS': {'charset': 'utf8mb4'},
+#         'NAME': 'weixinbot',
+#         'USER': 'root',
+#         'PASSWORD': 'keyerror',
+#     }
+# }
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'OPTIONS': {'charset': 'utf8mb4'},
         'NAME': 'weixinbot',
         'USER': 'root',
-        'PASSWORD': 'keyerror',
+        'PASSWORD': 'maxwell',
     }
 }
+
 
 
 # Password validation
