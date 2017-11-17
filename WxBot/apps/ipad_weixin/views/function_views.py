@@ -23,7 +23,7 @@ logger = logging.getLogger('django_views')
 
 class SendMsgView(View):
     """
-    接口： http://s-prod-04.qunzhu666.com:10024/robot/send_msg/
+    接口： http://s-prod-04.qunzhu666.com:10024/api/robot/send_msg/
     格式:
         {
             "md_username": "",
@@ -65,7 +65,7 @@ class SendMsgView(View):
 
 class PlatformUserList(View):
     """
-    接口: http://s-prod-04.qunzhu666.com:10024/robot/platform_user_list?platform_id=xxx
+    接口: http://s-prod-04.qunzhu666.com:10024/api/robot/platform_user_list?platform_id=xxx
     筛选登录了该平台所有的用户，返回手机号以及对应的机器人列表
     """
     def get(self, request):
@@ -104,10 +104,10 @@ class AddProductionChatroom(View):
         数据类型：josn
         格式：
         {
-            "md_username": "136xxx"
+            "wx_username": "wxid_......"
             "chatroom_list": ["chatroom.username",......]
         }
-        接口: http://s-prod-04.qunzhu666.com:10024/robot/add_production_chatroom/
+        接口: http://s-prod-04.qunzhu666.com:10024/api/robot/add_production_chatroom/
         本地: localhost:10024/robot/add_production_chatroom/
         """
         # TODO: 使用wx_id来作为筛选条件，而不是md_username
@@ -132,7 +132,7 @@ class RemoveProductionChatroom(View):
     def post(self, request):
         """
         移除生产群
-        接口: http://s-prod-04.qunzhu666.com:10024/robot/add_production_chatroom/
+        接口: http://s-prod-04.qunzhu666.com:10024/api/robot/add_production_chatroom/
         本地: localhost:10024/robot/remove_production_chatroom/
         """
         req_dict = json.loads(request.body)
@@ -159,7 +159,7 @@ class DefineSignRule(View):
             "keyword": "签到口令",
             "platform_id":
         }
-    接口： http://s-prod-04.qunzhu666.com:8080/robot/define_sign_rule/
+    接口： http://s-prod-04.qunzhu666.com:10024/api/robot/define_sign_rule/
     本地： localhost:10024/robot/define_sign_rule/
     """
     @csrf_exempt
