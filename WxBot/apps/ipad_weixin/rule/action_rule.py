@@ -13,12 +13,16 @@ from django.contrib.auth.models import User
 import urllib
 import requests
 import json
+import re
 
 import logging
 logger = logging.getLogger('weixin_bot')
 
 
-def filter_keyword_rule(wx_id, msg_dict):
+def filter_keyword_rule(nickname, wx_id, msg_dict):
+    data = get_Msgdata(msg_dict)
+    if data:
+        return data
     keyword = find_buy_start(msg_dict['Content'])
 
     if (keyword and keyword is not '') or ("我剁手都要" in msg_dict['Content']):
@@ -82,6 +86,28 @@ def find_buy_start(s):
         if len(lst) > 1:
             return lst[1]
     return False
+
+# 从消息中获取url以及邀请者
+def get_Msgdata(msg_dict):
+    if msg_dict.get('MsgType', 0) != 49:
+        return ""
+    title = re.findall('<title><!\[CDATA\[(.*?)\]\]></title>', msg_dict['Content'])
+    try:
+        if not title[0].encode('utf-8').endswith('群聊'):
+            return ""
+    except:
+        return ""
+    pattern = r'.*?<url>(.*?)</url>.*?'
+    res = re.findall(pattern, msg_dict['Content'])
+    if res:
+        url = re.findall('CDATA\[(.*?)\]\].*', res[0])
+        if url:
+            return {'url': url[0], 'fromuser': msg_dict['FromUserName']}
+
+
+
+
+
 
 
 if __name__ == "__main__":

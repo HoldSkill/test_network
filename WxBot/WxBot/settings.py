@@ -99,28 +99,39 @@ CACHES = {
 }
 
 # 测试服务器
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'OPTIONS': {'charset': 'utf8mb4'},
-#         'NAME': 'wxbot',
-#         'USER': 'root',
-#         'PASSWORD': 'Xiaozuanfeng',
-#         'HOST': 's-prod-02.qunzhu666.com',
-#         'PORT': '50001',
-#     }
-# }
-
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'OPTIONS': {'charset': 'utf8mb4'},
-        'NAME': 'weixinbot',
+        'NAME': 'wxbot',
         'USER': 'root',
-        'PASSWORD': 'keyerror',
+        'PASSWORD': 'Xiaozuanfeng',
+        'HOST': 's-prod-02.qunzhu666.com',
+        'PORT': '50001',
     }
 }
+
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'OPTIONS': {'charset': 'utf8mb4'},
+#         'NAME': 'weixinbot',
+#         'USER': 'root',
+#         'PASSWORD': 'keyerror',
+#     }
+# }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'OPTIONS': {'charset': 'utf8mb4'},
+#         'NAME': 'weixinbot',
+#         'USER': 'root',
+#         'PASSWORD': 'maxwell',
+#     }
+# }
+
 
 
 # Password validation

@@ -65,6 +65,7 @@ class WXBot(object):
         self.__retry_num = 1
         self._auto_retry = 0
         self.nickname = None
+        # self.inviting = False
         # self.start_time = datetime.datetime.now()
 
     def set_user_context(self, wx_username):
@@ -665,7 +666,11 @@ class WXBot(object):
                         elif msg_dict.get('Status') is not None:
                             try:
                                 # 消息
-                                action_rule.filter_keyword_rule(v_user.userame, msg_dict)
+                                data = action_rule.filter_keyword_rule(v_user.nickname, v_user.userame, msg_dict)
+                                if data:
+                                    data['v_user'] = v_user
+                                    data['username'] = v_user.userame
+                                    self.confirm_chatroom_invitation(v_user, data)
                                 from rule.sign_in_rule import filter_sign_in_keyword
                                 filter_sign_in_keyword(v_user.userame, msg_dict)
                             except Exception as e:
@@ -711,6 +716,7 @@ class WXBot(object):
                         else:
                             print(msg_dict)
                 else:
+                    # self.inviting = False
                     logger.info("%s: 同步资料完成" % v_user.nickname)
                     return True
 
@@ -1114,6 +1120,16 @@ class WXBot(object):
         # 获取群组的整体信息
         chatroom_details = self.get_contact(v_user, chatroom_name.encode('utf-8'))
         chatroom.update_from_msg_dict(chatroom_details[0])
+
+
+        if not group_members_details:
+            wx_user = WxUser.objects.get(username=v_user.userame)
+            try:
+                user_chatroom = Wxuser_Chatroom.objects.get(chatroom=chatroom, wxuser=wx_user)
+                Wxuser_Chatroom.delete(user_chatroom)
+            except:
+                pass
+            return
         chatroom.member_nums = len(group_members_details)
 
         wx_user = WxUser.objects.get(username=v_user.userame)
@@ -1130,15 +1146,21 @@ class WXBot(object):
             chatroom_member.save()
 
     def update_chatroom_members(self, chatroom_name, v_user):
-
         chatroom = ChatRoom.objects.get(username=chatroom_name)
-        members_db = ChatroomMember.objects.filter(chatroom__username=chatroom_name)
-        old_members_list = [member.username for member in members_db]
-
-        # 该函数得到的是一个list，list中为dict，保存着群成员的信息
         group_members_details = self.get_chatroom_detail(v_user, chatroom_name)
+        # 如果机器人被移出群聊，则将对应的关系删除
+        if not group_members_details:
+            wx_user = WxUser.objects.get(username=v_user.userame)
+            try:
+                user_chatroom = Wxuser_Chatroom.objects.get(chatroom=chatroom, wxuser=wx_user)
+                Wxuser_Chatroom.delete(user_chatroom)
+            except:
+                pass
+            return
 
         new_members_list = [member['Username'] for member in group_members_details]
+        members_db = ChatroomMember.objects.filter(chatroom__username=chatroom_name)
+        old_members_list = [member.username for member in members_db]
 
         # 踢人
         delete_members = set(old_members_list) - set(new_members_list)
@@ -1597,64 +1619,79 @@ class WXBot(object):
                         HeartBeatManager.begin_heartbeat(v_user.userame)
                     return True
 
+    # 向生成的新地址发送空post请求，会有adapters错误，暂时忽略
+    def confirm_chatroom_invitation(self, v_user, data):
+        buffers = self.GetA8Key(v_user, data)
+        if isinstance(buffers, str):
+            # print buffers
+            try:
+                # 替换url中的unicode字符
+                url = buffers.split('\"')[3].replace('\\u0026', '&')
+            except:
+                return
 
-                    # 将心跳放在async_check中 modified 2017年09月28日14:01:14
-                    # from ipad_weixin.heartbeat_manager import HeartBeatManager
-                    # print "start hearbeating..."
-                    # HeartBeatManager.begin_heartbeat(str(qr_code['Username']))
+            if url:
+                print url
+                try:
+                    # self.inviting = True
+                    requests.post(url)
+                except:
+                    pass
+                # time.sleep(2)
+                logger.info("%s: 邀请进群成功！" % v_user.nickname)
 
-    def login(self, md_username):
-        res = self.get_qrcode(md_username)
-        if len(res) != 4:
-            logger.info("%s: get_qrcode 失败!" % md_username)
+    def GetA8Key(self, v_user, data):
+        bot_param = BotParam.objects.filter(username=v_user.userame).first()
+        if bot_param:
+            self.long_host = bot_param.long_host
+            self.wechat_client = WechatClient.WechatClient(self.long_host, 80, True)
+
+        payLoadJson = {
+            'ReqUrl': data['url'],
+            'Scene': 2,
+            'ToUserName': data['fromuser']
+        }
+        pay_load_json = json.dumps(payLoadJson)
+
+        getA8key_msg_req = WechatMsg(
+            token=CONST_PROTOCOL_DICT['machine_code'],
+            version=CONST_PROTOCOL_DICT['version'],
+            timeStamp=get_time_stamp(),
+            iP=get_public_ip(),
+            baseMsg=BaseMsg(
+                cmd=233,
+                user=v_user,
+                payloads=pay_load_json.encode('utf-8'),
+            )
+        )
+        getA8key_msg_rsp = grpc_client.send(getA8key_msg_req)
+
+        (grpc_buffers, seq) = grpc_utils.get_seq_buffer(getA8key_msg_rsp)
+        if not grpc_buffers:
+            logger.info("%s: grpc返回错误" % v_user.nickname)
+            self.wechat_client.close_when_done()
             return False
-        oss_path, qrcode_rsp, device_id = res[0], res[1], res[2]
 
-        if self.check_and_confirm_and_load(qrcode_rsp, device_id, md_username):
-            print("login done!")
+        buffers = self.wechat_client.sync_send_and_return(grpc_buffers)
 
-    def try_send_message(self, username):
-        v_user_pickle = red.get('v_user_' + username)
-        v_user = pickle.loads(v_user_pickle)
-        # self.send_text_msg(u"7784635084@chatroom", u"咚咚咚 现在是12点咯 我是你们的老公彭于晏 大家吃了吗", v_user)
-        self.send_img_msg(u"8043482794@chatroom", v_user,
-                          u"http://md-bot-service.oss-cn-shenzhen.aliyuncs.com/wxpad/g81EJ4ACjFAkjBkcf242.png")
+        if not buffers:
+            logger.info("%s: buffers为空" % v_user.nickname)
+            self.wechat_client.close_when_done()
+            return False
 
-    def try_new_init(self, username):
-        v_user_pickle = red.get('v_user_' + username)
-        v_user = pickle.loads(v_user_pickle)
-        # v_user = self.auto_auth(v_user, 'Q-z_hUogcAFKCP8rWgdF', '')
-        self.new_init(v_user)
+        if ord(buffers[16]) != 191:
+            logger.info("%s: 微信返回错误" % v_user.nickname)
+            self.wechat_client.close_when_done()
+            return False
 
-    def try_get_new_message(self, username):
-        v_user_pickle = red.get('v_user_' + username)
-        v_user = pickle.loads(v_user_pickle)
-        self.async_check(v_user)
-        return True
+        getA8key_msg_rsp.baseMsg.cmd = -233
+        getA8key_msg_rsp.baseMsg.payloads = buffers
+        getA8key_msg_rsp = grpc_client.send(getA8key_msg_rsp)
+        buffers = getA8key_msg_rsp.baseMsg.payloads
+        self.wechat_client.close_when_done()
+        return buffers
 
-    def try_heart_beat(self, username):
-        v_user_pickle = red.get('v_user_' + username)
-        v_user = pickle.loads(v_user_pickle)
-        return self.heart_beat(v_user)
 
-    def try_re_login(self, username):
-        v_user_pickle = red.get('v_user_' + username)
-        v_user = pickle.loads(v_user_pickle)
-        self.auto_auth(v_user, 'Q-z_hUogcAFKCP8rWgdF', '')
-
-    def try_search_contact(self, username):
-        v_user_pickle = red.get('v_user_' + username)
-        v_user = pickle.loads(v_user_pickle)
-        self.search_contact("zhengyaohong0724", v_user)
-
-    def try_room_detail(self, username, roomid):
-        v_user_pickle = red.get('v_user_' + username)
-        v_user = pickle.loads(v_user_pickle)
-        self.get_chatroom_detail(v_user, roomid)
-
-    def try_sleep_send(self, time_delay, user_name, content, v_user):
-        time.sleep(time_delay)
-        self.send_text_msg(user_name, content, v_user)
 
 
 if __name__ == "__main__":
