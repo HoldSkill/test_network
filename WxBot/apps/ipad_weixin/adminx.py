@@ -27,7 +27,7 @@ xadmin.site.register(SignInRule, SignRuleAdmin)
 class WxUserAdmin(object):
     list_display = ['nickname', 'username', 'login', 'is_customer_server', 'user']
     list_editable = ['is_customer_server', 'login']
-    search_fields = ['nickname']
+    search_fields = ['nickname', 'user__username', 'username']
     list_filter = ['login', 'is_customer_server']
 
 xadmin.site.register(WxUser, WxUserAdmin)

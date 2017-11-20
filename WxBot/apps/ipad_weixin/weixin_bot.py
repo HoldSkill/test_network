@@ -830,8 +830,14 @@ class WXBot(object):
             red.set('v_user_' + v_user.userame, v_user_pickle)
         if new_init_rsp.baseMsg.ret == 8888:
             try:
-                wxuser = WxUser.objects.filter(username=v_user.userame).order_by('-id').first()
-
+                wxuser = WxUser.objects.get(username=v_user.userame)
+                """
+                这里的逻辑就只有这么简单吗？
+                假设 136xxx 登录了star_chain，使用 樂阳 登录ipad， 会产生哪些附加产品？
+                    auth_user表创建username=136xxx, first_name=platform_id, 并且添加WxUser的ManyToManyRelationship
+                那么，136xxx如果想要登录 mmt 系统，并且用 mimi 登录ipad进行发单呢？
+                    此时136xxx的first_name为 mmt， 原有的微信机器人会变为在 mmt 进行发单
+                """
                 user, created = AuthUser.objects.get_or_create(username=md_username)
                 user.first_name = platform_id
                 user.save()
