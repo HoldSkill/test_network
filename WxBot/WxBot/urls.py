@@ -37,7 +37,8 @@ robot_urls = [
     url(r'send_msg', SendMsgView.as_view()),
     url(r'platform_user_list', PlatformUserList.as_view()),
     url(r'add_production_chatroom', AddProductionChatroom.as_view()),
-    url(r'remove_production_chatroom', RemoveProductionChatroom.as_view())
+    url(r'remove_production_chatroom', RemoveProductionChatroom.as_view()),
+
 ]
 
 xadmin_urls = [

@@ -23,7 +23,7 @@ logger = logging.getLogger('django_views')
 
 class SendMsgView(View):
     """
-    接口： http://s-prod-04.qunzhu666.com:10024/robot/send_msg/
+    接口： http://s-prod-04.qunzhu666.com:10024/api/robot/send_msg/
     格式:
         {
             "md_username": "",
@@ -34,6 +34,7 @@ class SendMsgView(View):
     def post(self, request):
         req_dict = json.loads(request.body)
         md_username = req_dict.get("md_username", "")
+        is_search_text = req_dict.get("search_text", "")
 
         if not md_username:
             return HttpResponse(json.dumps({"ret": 0, "reason": "sendMsg md_username不能为空"}))
@@ -46,7 +47,11 @@ class SendMsgView(View):
         if not wxuser_list:
             return HttpResponse(json.dumps({"ret": 0, "reason": "wxuser_list 为空"}))
         for wxuser in wxuser_list:
-            chatroom_list = ChatRoom.objects.filter(wxuser=wxuser, wxuser_chatroom__is_send=True)
+            if is_search_text:
+                chatroom_list = ChatRoom.objects.filter(wxuser=wxuser, wxuser_chatroom__is_send=False,
+                                                        wxuser_chatroom__is_search=True)
+            else:
+                chatroom_list = ChatRoom.objects.filter(wxuser=wxuser, wxuser_chatroom__is_send=True)
             if not chatroom_list:
                 platform_id = User.objects.get(username=md_username).first_name
                 beary_chat("平台：%s, %s 生产群为空" % (platform_id, wxuser.nickname))
@@ -65,7 +70,7 @@ class SendMsgView(View):
 
 class PlatformUserList(View):
     """
-    接口: http://s-prod-04.qunzhu666.com:10024/robot/platform_user_list?platform_id=xxx
+    接口: http://s-prod-04.qunzhu666.com:10024/api/robot/platform_user_list?platform_id=xxx
     筛选登录了该平台所有的用户，返回手机号以及对应的机器人列表
     """
     def get(self, request):
@@ -104,10 +109,10 @@ class AddProductionChatroom(View):
         数据类型：josn
         格式：
         {
-            "md_username": "136xxx"
+            "wx_username": "wxid_......"
             "chatroom_list": ["chatroom.username",......]
         }
-        接口: http://s-prod-04.qunzhu666.com:10024/robot/add_production_chatroom/
+        接口: http://s-prod-04.qunzhu666.com:10024/api/robot/add_production_chatroom/
         本地: localhost:10024/robot/add_production_chatroom/
         """
         # TODO: 使用wx_id来作为筛选条件，而不是md_username
@@ -132,7 +137,7 @@ class RemoveProductionChatroom(View):
     def post(self, request):
         """
         移除生产群
-        接口: http://s-prod-04.qunzhu666.com:10024/robot/add_production_chatroom/
+        接口: http://s-prod-04.qunzhu666.com:10024/api/robot/add_production_chatroom/
         本地: localhost:10024/robot/remove_production_chatroom/
         """
         req_dict = json.loads(request.body)
@@ -159,7 +164,7 @@ class DefineSignRule(View):
             "keyword": "签到口令",
             "platform_id":
         }
-    接口： http://s-prod-04.qunzhu666.com:8080/robot/define_sign_rule/
+    接口： http://s-prod-04.qunzhu666.com:10024/api/robot/define_sign_rule/
     本地： localhost:10024/robot/define_sign_rule/
     """
     @csrf_exempt
@@ -186,3 +191,22 @@ class DefineSignRule(View):
             sign_rule.save()
 
         return HttpResponse(json.dumps({"ret": 1, "reason": "添加红包口令成功"}))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
