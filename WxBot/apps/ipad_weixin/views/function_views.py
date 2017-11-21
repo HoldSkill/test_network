@@ -193,8 +193,27 @@ class DefineSignRule(View):
         return HttpResponse(json.dumps({"ret": 1, "reason": "添加红包口令成功"}))
 
 
+class SendGroupMessageVIew(View):
+    """
+    向所有已登录mmt平台用户的所有生产群中发送消息
+    """
+    def post(self, request):
+        req_dict = json.loads(request.body)
+        platform_id = req_dict['platform_id']
+        data = req_dict['data']
+        wxuser_list = WxUser.objects.filter(login=1, is_customer_server=False, user__first_name=platform_id)
+        if not wxuser_list:
+            return HttpResponse(json.dumps({"ret": 0, "resaon": "筛选平台login WxUser为空"}))
+        for wxuser in wxuser_list:
+            chatroom_list = ChatRoom.objects.filter(wxuser=wxuser, wxuser_chatroom__is_send=True)
+            if not chatroom_list:
+                continue
+            for chatroom in chatroom_list:
+                wx_id = wxuser.username
+                chatroom_id = chatroom.username
+                thread.start_new_thread(sendMsg, (wx_id, chatroom_id, data))
 
-
+        return HttpResponse(json.dumps({"ret": 1, "data": "处理完成"}))
 
 
 
