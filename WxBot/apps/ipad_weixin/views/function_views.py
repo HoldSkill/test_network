@@ -122,6 +122,9 @@ class AddProductionChatroom(View):
         if not chatroom_list:
             return HttpResponse(json.dumps({"ret": 0, "reason": "chatroom_list为空"}))
         for chatroom_username in chatroom_list:
+            # 用户总群禁止添加
+            if chatroom_username == "6606855231@chatroom":
+                continue
             wxuser_chatroom = Wxuser_Chatroom.objects.get(
                 chatroom__username=chatroom_username, wxuser__username=wx_username
             )
