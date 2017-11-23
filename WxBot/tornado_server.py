@@ -14,7 +14,7 @@ tornado.options.define('port', default=10024, help="run the given port", type=in
 
 
 def main():
-    tornado.options.parse_command_line()
+    tornado.options.options.logging = "info"
     os.environ['DJANGO_SETTINGS_MODULE'] = 'WxBot.settings'
     application = get_wsgi_application()
     container = tornado.wsgi.WSGIContainer(application)

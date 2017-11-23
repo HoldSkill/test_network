@@ -31,7 +31,6 @@ def filter_sign_in_keyword(wx_id, msg_dict):
     from_user_id = ''
     # 粗略判断
     if content in keywords:
-
         # 机器人自己在群里说话
         if '@chatroom' in msg_dict['ToUserName']:
             speaker_id = msg_dict['FromUserName']  # 微信ID
@@ -42,7 +41,7 @@ def filter_sign_in_keyword(wx_id, msg_dict):
             chatroom = ChatRoom.objects.get(username=msg_dict['FromUserName'])
             speaker_id = msg_dict['Content'].split(':')[0]
             from_user_id = msg_dict['FromUserName']
-
+        logger.info("WxUser: {0}, 群 {1} 进入签到".format(wx_id, chatroom.nickname))
         # 判断该群的签到规则是否为keyword
         try:
             sign_rule_db = SignInRule.objects.get(keyword=content, chatroom=chatroom)
@@ -82,6 +81,7 @@ def filter_sign_in_keyword(wx_id, msg_dict):
                             sendMsg(wx_id, from_user_id, [img_url])
         except Exception as e:
             logger.error(e)
+            logger.error("WxUser: {0}, 群 {1} 签到发生异常, 原因: {2}".format(wx_id, chatroom.nickname, e.message))
 
     else:
         pass
