@@ -50,20 +50,31 @@ class SendMsgView(View):
             if is_search_text:
                 chatroom_list = ChatRoom.objects.filter(wxuser=wxuser, wxuser_chatroom__is_send=False,
                                                         wxuser_chatroom__is_search=True)
+                if not chatroom_list:
+                    platform_id = User.objects.get(username=md_username).first_name
+                    beary_chat("平台：%s, %s 单一搜索群为空，搜索文案发送失败" % (platform_id, wxuser.nickname))
+                    continue
+                    # 这里如果直接返回的话，那么接下的wxuser将得不到处理
+                    # return HttpResponse(json.dumps({"ret": 0, "data": "发单群为空"}))
+
+                for chatroom in chatroom_list:
+                    wx_id = wxuser.username
+                    chatroom_id = chatroom.username
+                    thread.start_new_thread(sendMsg, (wx_id, chatroom_id, data))
             else:
                 chatroom_list = ChatRoom.objects.filter(wxuser=wxuser, wxuser_chatroom__is_send=True)
-            if not chatroom_list:
-                platform_id = User.objects.get(username=md_username).first_name
-                beary_chat("平台：%s, %s 生产群为空" % (platform_id, wxuser.nickname))
-                continue
-                # 这里如果直接返回的话，那么接下的wxuser将得不到处理
-                # return HttpResponse(json.dumps({"ret": 0, "data": "发单群为空"}))
+                if not chatroom_list:
+                    platform_id = User.objects.get(username=md_username).first_name
+                    beary_chat("平台：%s, %s 生产群为空" % (platform_id, wxuser.nickname))
+                    continue
+                    # 这里如果直接返回的话，那么接下的wxuser将得不到处理
+                    # return HttpResponse(json.dumps({"ret": 0, "data": "发单群为空"}))
 
-            for chatroom in chatroom_list:
-                # 一个群一个线程去处理
-                wx_id = wxuser.username
-                chatroom_id = chatroom.username
-                thread.start_new_thread(sendMsg, (wx_id, chatroom_id, data))
+                for chatroom in chatroom_list:
+                    # 一个群一个线程去处理
+                    wx_id = wxuser.username
+                    chatroom_id = chatroom.username
+                    thread.start_new_thread(sendMsg, (wx_id, chatroom_id, data))
 
         return HttpResponse(json.dumps({"ret": 1, "data": "处理完成"}))
 
@@ -198,6 +209,7 @@ class DefineSignRule(View):
 
 class SendGroupMessageVIew(View):
     """
+    接口： s-prod-04.qunzhu666.com/api/robot/send_group_msg/
     向所有已登录mmt平台用户的所有生产群中发送消息
     """
     def post(self, request):
