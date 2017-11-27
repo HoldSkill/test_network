@@ -25,8 +25,8 @@ def filter_keyword_rule(nickname, wx_id, msg_dict):
         return data
     keyword = find_buy_start(msg_dict['Content'])
 
-    if (keyword and keyword is not '') or ("我剁手都要" in msg_dict['Content']):
-        if "我剁手都要" in msg_dict['Content']:
+    if (keyword and keyword is not '') or ("我剁手都要" in msg_dict['Content']) or("天猫APP" in msg_dict["Content"]):
+        if "我剁手都要" in msg_dict['Content'] or "天猫APP" in msg_dict['Content']:
             keyword = msg_dict['Content']
         customer_service_list = WxUser.objects.filter(username=wx_id, is_customer_server=True)
         if wx_id in [wx_user.username for wx_user in customer_service_list]:

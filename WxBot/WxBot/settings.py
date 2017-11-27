@@ -98,7 +98,6 @@ CACHES = {
     },
 }
 
-##测试服务器
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.mysql',
