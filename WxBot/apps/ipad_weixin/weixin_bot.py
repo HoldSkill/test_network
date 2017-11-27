@@ -6,6 +6,12 @@ if sys.getdefaultencoding() != defaultencoding:
     reload(sys)
     sys.setdefaultencoding(defaultencoding)
 
+import os
+
+import sys
+b_path = os.path.abspath("..")
+# b_path = '/home/may/work/taobaoke_weixinbot/WxBot'
+sys.path.append(b_path)
 
 import base64
 import json
@@ -19,9 +25,8 @@ import re
 from PIL import Image
 from io import BytesIO
 
-import os
 import django
-os.environ.update({"DJANGO_SETTINGS_MODULE": "fuli.settings"})
+os.environ.update({"DJANGO_SETTINGS_MODULE": "WxBot.settings"})
 django.setup()
 
 import settings
@@ -427,7 +432,7 @@ class WXBot(object):
             logger.info('%s 登录成功' % qr_code['Nickname'])
             oss_utils.beary_chat("%s 扫码完成，开启心跳中--%s" % (qr_code['Nickname'], time.asctime(time.localtime(time.time()))))
 
-            # 将User赋值
+            # 将User赋值 //sahuxin
             v_user = qrcode_login_rsp.baseMsg.user
 
             try:
@@ -688,25 +693,27 @@ class WXBot(object):
                                 chatroom_name = msg_dict['ToUserName']
 
                             if chatroom_name:
-                                chatroom, created = ChatRoom.objects.get_or_create(username=chatroom_name)
-                                if chatroom_owner:
-                                    chatroom.chat_room_owner = chatroom_owner
-                                    chatroom.save()
+                                try:
+                                    chatroom, created = ChatRoom.objects.get_or_create(username=chatroom_name)
+                                    if chatroom_owner:
+                                        chatroom.chat_room_owner = chatroom_owner
+                                        chatroom.save()
 
-                                # 触发规则是什么？
-                                # 群与wxuser没有建立联系，群昵称为空，群成员为空
-                                if not ChatRoom.objects.filter(wxuser__username=v_user.userame, username=chatroom_name) \
-                                        or not chatroom.nickname or not chatroom.chatroommember_set.all():
-                                    self.get_and_update_chatroom(v_user, chatroom_name, chatroom)
-                                else:
-                                    # 该群存在, 则可能是更改群名称、拉/踢人等。
-                                    if msg_dict['Status'] == 4:
-                                        self.update_chatroom_members(chatroom_name, v_user)
-                                        # TODO: 目前存在某些问题，待解决。
-                                        if u"邀请" in msg_dict['Content'] and \
-                                                Wxuser_Chatroom.objects.get(chatroom=chatroom, wxuser__username=v_user.userame).is_send:
-                                            self.send_invited_message(msg_dict, v_user)
-
+                                    # 触发规则是什么？
+                                    # 群与wxuser没有建立联系，群昵称为空，群成员为空
+                                    if not ChatRoom.objects.filter(wxuser__username=v_user.userame, username=chatroom_name) \
+                                            or not chatroom.nickname or not chatroom.chatroommember_set.all():
+                                        self.get_and_update_chatroom(v_user, chatroom_name, chatroom)
+                                    else:
+                                        # 该群存在, 则可能是更改群名称、拉/踢人等。
+                                        if msg_dict['Status'] == 4:
+                                            self.update_chatroom_members(chatroom_name, v_user)
+                                            # TODO: 目前存在某些问题，待解决。
+                                            if u"邀请" in msg_dict['Content'] and \
+                                                    Wxuser_Chatroom.objects.get(chatroom=chatroom, wxuser__username=v_user.userame).is_send:
+                                                self.send_invited_message(msg_dict, v_user)
+                                except Exception as e:
+                                    logger.error(e)
                             try:
                                 message, created = Message.objects.get_or_create(msg_id=msg_dict['MsgId'])
                                 message.update_from_msg_dict(msg_dict)
@@ -917,7 +924,7 @@ class WXBot(object):
         self.wechat_client.close_when_done()
         # return True
 
-    def send_voice_msg(self, v_user, to_user_name, url):
+    def send_voice_msg(self, v_user, to_user_name):
         """
         发送语音 btn_SendVoice_Click
         :param v_user:
@@ -925,11 +932,11 @@ class WXBot(object):
         :return:
         """
 
-        # bot_param = BotParam.objects.filter(username=v_user.userame).first()
-        # if bot_param:
-        #     self.long_host = bot_param.long_host
-        #     self.wechat_client = WechatClient.WechatClient(self.long_host, 80, True)
-        voice_path = 'img/test.mp3'
+        bot_param = BotParam.objects.filter(username=v_user.userame).first()
+        if bot_param:
+            self.long_host = bot_param.long_host
+            self.wechat_client = WechatClient.WechatClient(self.long_host, 80, True)
+        voice_path = '/home/may/Downloads/msg.amr'
         with open(voice_path, 'rb') as voice_file:
             data = voice_file.read()
         payload = {
@@ -937,10 +944,12 @@ class WXBot(object):
             'Offset': 0,
             'Length': len(data),
             'EndFlag': 1,
-            'Data': data,
-            'VoiceFormat': 0
+            'VoiceLength': 1000,
+            'Data': base64.b64encode(data),
+            'VoiceFormat': 4 #4是silk
         }
         payload_json = json.dumps(payload)
+        # payload_json = requests.post(url='http://192.168.0.173:9999/get-json',data={"to_user_name":to_user_name, "file_path":'ttt.amr'}).content
         send_voice_req = WechatMsg(
             token=CONST_PROTOCOL_DICT['machine_code'],
             version=CONST_PROTOCOL_DICT['version'],
@@ -949,14 +958,31 @@ class WXBot(object):
             baseMsg=BaseMsg(
                 cmd=127,
                 user=v_user,
-                payloads=payload_json.encode('utf-8')
+                payloads=payload_json
             )
         )
         send_voice_rsp = grpc_client.send(send_voice_req)
-        (buffers, seq) = grpc_utils.get_seq_buffer(send_voice_rsp)
-        buffers = self.wechat_client.sync_send_and_return(buffers)
+        (grpc_buffers, seq) = grpc_utils.get_seq_buffer(send_voice_rsp)
+
+        if not grpc_buffers:
+            logger.info("%s: grpc返回错误" % v_user.nickname)
+
+        buffers = self.wechat_client.sync_send_and_return(grpc_buffers)
+
+        if not buffers:
+            logger.info("%s: buffers为空" % v_user.nickname)
+            self.wechat_client.close_when_done()
+            return
+
+
+        if ord(buffers[16]) != 191:
+            logger.info("%s: 微信返回错误" % v_user.nickname)
+
+        else:
+            logger.info('{0} 向 {1} 发送语音:成功'.format(v_user.nickname, to_user_name))
+
         self.wechat_client.close_when_done()
-        return check_buffer_16_is_191(buffers)
+        return
 
     def send_img_msg(self, user_name, v_user, url):
         """
@@ -1691,8 +1717,16 @@ class WXBot(object):
         self.wechat_client.close_when_done()
         return buffers
 
-
-
+    # def login(self, md_username):
+    #     res = self.get_qrcode(md_username)
+    #     if len(res) != 4:
+    #         logger.info("%s: get_qrcode 失败!" % md_username)
+    #         return False
+    #     oss_path, qrcode_rsp, device_id = res[0], res[1], res[2]
+    #
+    #     platform_id = "make_money_together"
+    #     if self.check_and_confirm_and_load(qrcode_rsp, device_id, md_username, platform_id):
+    #         print("login done!")
 
 if __name__ == "__main__":
 
@@ -1704,11 +1738,12 @@ if __name__ == "__main__":
             # wx_user = "wxid_fh235f4nylp22"  # 小小
             # wx_user = "wxid_kj1papird5kn22"
             # wx_user = "wxid_3cimlsancyfg22"  # 点金
-            wx_user = "wxid_cegmcl4xhn5w22" #楽阳
+            # wx_user = "wxid_cegmcl4xhn5w22" #楽阳
             # wxid_sygscg13nr0g21
             # wx_user = "wxid_5wrnusfmt26932"
             # wxid_mynvgzqgnb5x22
             # wx_user = "wxid_sygscg13nr0g21"
+            wx_user = 'manmanshiguang002'
             print "**************************"
             print "enter cmd :{}".format(wx_user)
             print "**************************"
@@ -1755,7 +1790,7 @@ if __name__ == "__main__":
 
             elif cmd == 5:
                 # wx_bot.login('15158197021')
-                wx_bot.login('smart')
+                wx_bot.login('maytest')
                 # wx_bot.login('15900000010')
 
             elif cmd == 6:
@@ -1775,6 +1810,9 @@ if __name__ == "__main__":
             elif cmd == 9:
                 v_user = pickle.loads(red.get('v_user_' + wx_user))
                 wx_bot.send_app_msg(v_user, 'wxid_9zoigugzqipj21', '<appmsg appid="" sdkver="0"><title>Python2生命期</title><des>升级Python3保平安</des><action></action><type>33</type><showtype>0</showtype><soundtype>0</soundtype><mediatagname></mediatagname><messageext></messageext><messageaction></messageaction><content></content><contentattr>0</contentattr><url>https://mp.weixin.qq.com/mp/waerrpage?appid=wxedac7bb2a64c41f7&amp;type=upgrade&amp;upgradetype=3#wechat_redirect</url><lowurl></lowurl><dataurl></dataurl><lowdataurl></lowdataurl><appattach><totallen>0</totallen><attachid></attachid><emoticonmd5></emoticonmd5><fileext></fileext><cdnthumburl>304f02010004483046020100020406070d8b02033d14b9020464fd03b7020459e42bdd0421777869645f3364726e713365653230666732323237335f313530383132353636310204010800030201000400</cdnthumburl><cdnthumbmd5>b9b12405481c2d5273cf1e850aa1d4f6</cdnthumbmd5><cdnthumblength>206292</cdnthumblength><cdnthumbwidth>750</cdnthumbwidth><cdnthumbheight>1206</cdnthumbheight><cdnthumbaeskey>d40cb038f4f8400594cc78dc01913844</cdnthumbaeskey><aeskey>d40cb038f4f8400594cc78dc01913844</aeskey><encryver>0</encryver></appattach><extinfo></extinfo><sourceusername>gh_95486d903be5@app</sourceusername><sourcedisplayname>Python之禅</sourcedisplayname><thumburl></thumburl><md5></md5><statextstr></statextstr><weappinfo><username><![CDATA[gh_95486d903be5@app]]></username><appid><![CDATA[wxedac7bb2a64c41f7]]></appid><type>2</type><version>6</version><weappiconurl><![CDATA[http://mmbiz.qpic.cn/mmbiz_png/XzlqmpwbLjfFGD6TciaRy2IibOwyFBvQicRSjEeybKuzggG2wFXKMAbM2r54CvnpfKUp2tJMeHojqeoetQdYhdmZw/0?wx_fmt=png]]></weappiconurl><pagepath><![CDATA[pages/index/index.html]]></pagepath><shareId><![CDATA[0_wxedac7bb2a64c41f7_101125515_1508125660_0]]></shareId></weappinfo></appmsg>')
+            elif cmd == 10:
+                v_user = pickle.loads(red.get('v_user_' + wx_user))
+                wx_bot.send_voice_msg(v_user, '6610815091@chatroom')
 
 
         except Exception as e:

@@ -170,6 +170,19 @@ class ResetSingleHeartBeat(View):
         HeartBeatManager.begin_heartbeat(username)
         return HttpResponse(json.dumps({"ret": 1}))
 
+# use just for test
+class test(View):
+    def get(self, request):
+        username = request.GET.get('wx_id', "")
+        if not username:
+            return HttpResponse(json.dumps({"ret": 0, "reason": "wx_id不能为空"}))
+        v_user_pickle = red.get('v_user_' + username)
+        v_user = pickle.loads(v_user_pickle)
+        if v_user:
+            wx_bot = WXBot()
+            # wx_bot.send_text_msg('6610815091@chatroom', 'hello, hello, hello', v_user)
+            wx_bot.send_voice_msg(v_user, '6610815091@chatroom')
+        return HttpResponse(json.dumps({"ret": 1}))
 
 class AddSuperUser(View):
     """
