@@ -1147,7 +1147,6 @@ class WXBot(object):
         chatroom_details = self.get_contact(v_user, chatroom_name.encode('utf-8'))
         chatroom.update_from_msg_dict(chatroom_details[0])
 
-
         if not group_members_details:
             wx_user = WxUser.objects.get(username=v_user.userame)
             try:

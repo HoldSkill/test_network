@@ -5,6 +5,7 @@ import json
 import datetime
 import pickle
 import time
+import random
 
 from django.http import HttpResponse
 from django.views.generic.base import View
@@ -133,6 +134,8 @@ class ResetHeartBeat(View):
         if not auth_users:
             logger.info("重启心跳用户数为0")
         for auth_user in auth_users:
+            random_num = random.randint(0, 5)
+            time.sleep(random_num)
             logger.info("%s command 开启心跳" % auth_user.nickname)
             # 清空心跳列表
             if auth_user.username in HeartBeatManager.heartbeat_thread_dict:

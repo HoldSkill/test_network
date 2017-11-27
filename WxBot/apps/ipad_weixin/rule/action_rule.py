@@ -48,7 +48,8 @@ def filter_keyword_rule(nickname, wx_id, msg_dict):
             at_user_db = ChatroomMember.objects.filter(username=at_user_id).first()
             at_user_nickname = '@' + at_user_db.nickname
 
-        chatroom = ChatRoom.objects.filter(wxuser_chatroom__is_search=True, username=gid).first()
+        chatroom = ChatRoom.objects.get(wxuser_chatroom__is_search=True, username=gid, wxuser__username=wx_id)
+        logger.info("WxUser: {0}, 群: {1}, 进入商品搜索".format(nickname, chatroom.nickname))
         if chatroom:
             try:
                 # TODO: filter条件问题，是否会出现username ==null的情况
@@ -74,6 +75,9 @@ def filter_keyword_rule(nickname, wx_id, msg_dict):
                 sendMsg(wx_id, gid, data, at_user_nickname)
             except Exception as e:
                 logger.error(e)
+                logger.error("WxUser: {0}, 群: {1}, 商品搜索出现异常".format(nickname, chatroom.nickname))
+        else:
+            logger.info("WxUser: {0}搜索群为空".format(nickname))
 
 
 def find_buy_start(s):
