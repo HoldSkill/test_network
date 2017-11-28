@@ -156,6 +156,7 @@ class ResetSingleHeartBeat(View):
 
         v_user_pickle = red.get('v_user_' + username)
         v_user = pickle.loads(v_user_pickle)
+        cnt = 0
         if v_user:
             wx_bot = WXBot()
             wx_bot.logout_bot(v_user)
@@ -163,10 +164,11 @@ class ResetSingleHeartBeat(View):
             if heart_status:
                 if int(heart_status) == 1:
                     red.set('v_user_heart_' + username, 2)
-                    logger.info("%s: 准备终止用户心跳，需要大概30s" % username)
-                    oss_utils.beary_chat("%s: 准备终止用户心跳，需要大概30s..." % username)
-                    time.sleep(30)
-
+                    logger.info("%s: 准备终止用户心跳，请等待..." % username)
+                    oss_utils.beary_chat("%s: 准备终止用户心跳，请等待..." % username)
+                    while int(red.get('v_user_heart_' + username)) != 0 and cnt <= 30:
+                        cnt += 1
+                        time.sleep(1)
             red.set('v_user_heart_' + username, 0)
         if username in HeartBeatManager.heartbeat_thread_dict:
             del HeartBeatManager.heartbeat_thread_dict[username]
