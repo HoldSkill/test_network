@@ -627,29 +627,32 @@ class WXBot(object):
                 return False
 
             if ord(buffers[16]) != 191:
-                ret = read_int(buffers, 18)
-                if ret == -13:
-                    logger.info("%s: Session Time out 离线或用户取消登陆 执行二次登录" % v_user.nickname)
-                    wx_user = WxUser.objects.get(username=v_user.userame)
-                    UUid = wx_user.uuid
-                    DeviceType = wx_user.device_type
-                    print UUid
-                    print DeviceType
-                    if self.auto_auth(v_user, UUid, DeviceType, new_socket=new_socket) is True:
-                        return True
+                try:
+                    ret = read_int(buffers, 18)
+                    if ret == -13:
+                        logger.info("%s: Session Time out 离线或用户取消登陆 执行二次登录" % v_user.nickname)
+                        wx_user = WxUser.objects.get(username=v_user.userame)
+                        UUid = wx_user.uuid
+                        DeviceType = wx_user.device_type
+                        print UUid
+                        print DeviceType
+                        if self.auto_auth(v_user, UUid, DeviceType, new_socket=new_socket) is True:
+                            return True
+                        else:
+                            logger.info("%s: 执行二次登录失败， 即将退出机器人" % v_user.nickname)
+                            oss_utils.beary_chat("%s: 执行二次登录失败， 即将退出机器人" % v_user.nickname)
+                            self.wechat_client.close_when_done()
+                            self.logout_bot(v_user)
+                            return False
                     else:
-                        logger.info("%s: 执行二次登录失败， 即将退出机器人" % v_user.nickname)
-                        oss_utils.beary_chat("%s: 执行二次登录失败， 即将退出机器人" % v_user.nickname)
+                        logger.info("%s: 微信返回错误，即将退出机器人" % v_user.nickname)
+                        oss_utils.beary_chat("%s: 微信返回错误，即将退出机器人" % v_user.nickname)
                         self.wechat_client.close_when_done()
                         self.logout_bot(v_user)
-                        return False
-                else:
-                    logger.info("%s: 微信返回错误，即将退出机器人" % v_user.nickname)
-                    oss_utils.beary_chat("%s: 微信返回错误，即将退出机器人" % v_user.nickname)
-                    self.wechat_client.close_when_done()
-                    self.logout_bot(v_user)
-                    return 'ERROR'
-
+                        return 'ERROR'
+                except Exception as e:
+                    logging.error(e)
+                    return
             else:
                 logger.info("%s: 同步资料中" % v_user.nickname)
                 sync_rsp.baseMsg.cmd = -138

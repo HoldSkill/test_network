@@ -85,6 +85,8 @@ class HeartBeatManager(object):
                             logger.info("{}: 心跳终止成功".format(user.nickname))
                             oss_utils.beary_chat("{}: 心跳终止成功".format(user.nickname))
                             wx_bot.wechat_client.close_when_done()
+                            red.set('v_user_heart_' + wx_username, 0)
+
                             return
 
                 if not wx_bot.wechat_client.connected:
