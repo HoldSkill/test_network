@@ -72,7 +72,7 @@ def filter_keyword_rule(nickname, wx_id, msg_dict):
                 data = response_dict["data"]
 
                 from ipad_weixin.send_msg_type import sendMsg
-                sendMsg(wx_id, gid, data, at_user_nickname)
+                sendMsg(wx_id, gid, data, at_user_id)
             except Exception as e:
                 logger.error(e)
                 logger.error("WxUser: {0}, 群: {1}, 商品搜索出现异常".format(nickname, chatroom.nickname))
