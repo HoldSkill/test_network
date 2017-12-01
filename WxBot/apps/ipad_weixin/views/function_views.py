@@ -238,7 +238,7 @@ class SendMMTMessageView(View):
         wxuser = WxUser.objects.filter(user__username=md_username).first()
 
         if wxuser:
-            chatroom_list = ChatRoom.objects.filter(wxuser__username=wxuser.username, nickname__contains=u'MMT一起赚用户总群')
+            chatroom_list = ChatRoom.objects.filter(wxuser__username=wxuser.username, nickname__contains=u'MMT一起赚-用户总群')
             if not chatroom_list:
                 return HttpResponse(json.dumps({"ret": 0, "reason": "用户不在用户总群中！"}))
             else:
