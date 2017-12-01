@@ -16,6 +16,7 @@ from ipad_weixin.send_msg_type import sendMsg
 from ipad_weixin.utils.oss_utils import beary_chat
 
 import thread
+import random
 
 import logging
 logger = logging.getLogger('django_views')
@@ -229,6 +230,25 @@ class SendGroupMessageVIew(View):
                 thread.start_new_thread(sendMsg, (wx_id, chatroom_id, data))
 
         return HttpResponse(json.dumps({"ret": 1, "data": "处理完成"}))
+
+
+class SendMMTMessageView(View):
+    def get(self, request):
+        md_username = request.GET.get('md_username')
+        wxuser = WxUser.objects.filter(user__username=md_username).first()
+
+        if wxuser:
+            chatroom_list = ChatRoom.objects.filter(wxuser__username=wxuser.username, nickname__contains=u'MMT一起赚用户总群')
+            if not chatroom_list:
+                return HttpResponse(json.dumps({"ret": 0, "reason": "用户不在用户总群中！"}))
+            else:
+                l = random.randint(0, len(chatroom_list)-1)
+                chatroom = chatroom_list[l]
+                text = (u'我有新的订单啦～',)
+                wx_id = wxuser.username
+                sendMsg(wx_id, chatroom.username, text)
+                return HttpResponse(json.dumps({"ret": 1, "data": "发送订单信息完成"}))
+        return HttpResponse(json.dumps({"ret": 0, "data": "用户无效哦"}))
 
 
 
