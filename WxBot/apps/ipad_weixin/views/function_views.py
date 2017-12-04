@@ -210,7 +210,7 @@ class DefineSignRule(View):
 class SendGroupMessageVIew(View):
     """
     接口： s-prod-04.qunzhu666.com/api/robot/send_group_msg/
-    向所有已登录mmt平台用户的所有生产群中发送消息
+    向所有已登录mmt平台用户的所有生产群中发送消息， 群发消息中不应含有任何关于pid等信息
     """
     def post(self, request):
         req_dict = json.loads(request.body)
@@ -229,6 +229,8 @@ class SendGroupMessageVIew(View):
                 thread.start_new_thread(sendMsg, (wx_id, chatroom_id, data))
 
         return HttpResponse(json.dumps({"ret": 1, "data": "处理完成"}))
+
+
 
 
 

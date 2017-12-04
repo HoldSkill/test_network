@@ -1775,7 +1775,7 @@ if __name__ == "__main__":
                 v_user = pickle.loads(v_user_pickle)
                 #给谁发，谁发的，图片url
                 wx_bot.send_img_msg('wxid_9zoigugzqipj21', v_user,
-                                    "http://oss2.lanlanlife.com/1943bf8561ac2556d04c1b4078130ce1_800x800.jpg?x-oss-process=image/resize,w_600")
+                                    "http://md-oss.di25.cn/7730f412-d4e3-11e7-b4a3-1c1b0d3e23eb.jpeg")
 
             elif cmd == 3:
                 v_user_pickle = red.get('v_user_' + wx_user)
