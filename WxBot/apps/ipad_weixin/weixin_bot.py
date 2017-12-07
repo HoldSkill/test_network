@@ -1374,6 +1374,7 @@ class WXBot(object):
                 chatroom, created = ChatRoom.objects.get_or_create(username=contact_data['UserName'])
                 chatroom.update_from_msg_dict(contact_data)
                 chatroom.save()
+                print "更新群", contact_data['NickName']
 
                 Wxuser_Chatroom.objects.get_or_create(chatroom=chatroom, wxuser=wx_user)
 
@@ -1407,12 +1408,15 @@ class WXBot(object):
 
                     contact.wx_user.add(wx_user.id)
                     contact.save()
+                    print "更新", contact_data['NickName']
                 else:
                     # 可能用户开启了好友验证，可以将该用户删除
                     stranger = Contact.objects.filter(username=contact_data['UserName']).first()
                     if stranger:
                         # 删除好友关系
                         wx_user.contact_set.remove(stranger)
+                        stranger.delete()
+                        print "删除", contact_data['NickName']
                     print "ticket not 0!", contact_data['NickName']
                     pass
         logger.info('%s 获取联系人成功' % v_user.nickname)
