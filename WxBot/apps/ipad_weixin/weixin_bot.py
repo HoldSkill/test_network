@@ -899,6 +899,8 @@ class WXBot(object):
                 payloads=payLoadJson.encode('utf-8')
             )
         )
+        # import binascii
+        # print binascii.b2a_hex(v_user.sessionKey)
         send_text_rsp = grpc_client.send(send_text_req)
 
         (grpc_buffers, seq) = grpc_utils.get_seq_buffer(send_text_rsp)
@@ -911,7 +913,8 @@ class WXBot(object):
 
         if not buffers:
             logger.info("%s: buffers为空" % v_user.nickname)
-            # return False
+            self.wechat_client.close_when_done()
+            return False
 
         # while not buffers:
         #     buffers = self.wechat_client.get_packaget_by_seq(seq)
@@ -1719,16 +1722,114 @@ class WXBot(object):
         self.wechat_client.close_when_done()
         return buffers
 
-    # def login(self, md_username):
-    #     res = self.get_qrcode(md_username)
-    #     if len(res) != 4:
-    #         logger.info("%s: get_qrcode 失败!" % md_username)
-    #         return False
-    #     oss_path, qrcode_rsp, device_id = res[0], res[1], res[2]
-    #
-    #     platform_id = "make_money_together"
-    #     if self.check_and_confirm_and_load(qrcode_rsp, device_id, md_username, platform_id):
-    #         print("login done!")
+    def get_room_qrcode(self, v_user, chatroom_id):
+        bot_param = BotParam.objects.filter(username=v_user.userame).first()
+        if bot_param:
+            self.long_host = bot_param.long_host
+            self.wechat_client = WechatClient.WechatClient(self.long_host, 80, True)
+        payloadJson = json.dumps({"Username": chatroom_id})
+        getwxqrcode_req = WechatMsg(
+            token=CONST_PROTOCOL_DICT['machine_code'],
+            version=CONST_PROTOCOL_DICT['version'],
+            timeStamp=get_time_stamp(),
+            iP=get_public_ip(),
+            baseMsg=BaseMsg(
+                cmd=168,
+                user=v_user,
+                payloads=payloadJson.encode('utf-8'),
+        ))
+        getwxqrcode_rep = grpc_client.send(getwxqrcode_req)
+        (grpc_buffers, seq) = grpc_utils.get_seq_buffer(getwxqrcode_rep)
+
+        if not grpc_buffers:
+            logger.info("%s: grpc返回错误" % v_user.nickname)
+            self.wechat_client.close_when_done()
+            return False
+
+        buffers = self.wechat_client.sync_send_and_return(grpc_buffers)
+
+        if not buffers:
+            logger.info("%s: buffers为空" % v_user.nickname)
+            self.wechat_client.close_when_done()
+            return False
+
+        if ord(buffers[16]) != 191:
+            logger.info("%s: 微信返回错误" % v_user.nickname)
+            self.wechat_client.close_when_done()
+            return False
+        getwxqrcode_rep.baseMsg.cmd = -168
+        getwxqrcode_rep.baseMsg.payloads = buffers
+        getwxqrcode_rep = grpc_client.send(getwxqrcode_rep)
+        buffers = getwxqrcode_rep.baseMsg.payloads
+        qr_code = json.loads(buffers)
+        imgData = base64.b64decode(qr_code['QrcodeBuf'])
+        try:
+            oss_path = oss_utils.put_object_to_oss("wxpad/" + base64.b32encode(chatroom_id) + ".png", imgData)
+            logger.info("oss_path is: {}".format(oss_path))
+            # print("oss_path is: {}".format(oss_path))
+        except Exception as e:
+            logger.error(e)
+            # print('upload oss error by uuid:{}'.format(uuid))
+            return
+        self.wechat_client.close_when_done()
+        return oss_path
+
+
+    def download_voice(self, v_user, data):
+        data = {'msgid': 1646033292, 'length': 23682, 'clientmsgid': '49d78b71ea4377121494e8adcccd8e05wxid_3drnq3ee20fg2268_1511944205'}
+        bot_param = BotParam.objects.filter(username=v_user.userame).first()
+        if bot_param:
+            self.long_host = bot_param.long_host
+            self.wechat_client = WechatClient.WechatClient(self.long_host, 80, True)
+        voicedata = ''
+        startpos, blocklen, datalength = 0, 15536, int(data['length'])
+
+        while startpos != datalength:
+            count = blocklen if datalength-startpos > blocklen else datalength-startpos
+            payloadJson = json.dumps({'MsgId': data['msgid'], 'StartPos': startpos,\
+                                  'Datalen': count, 'ClientMsgId': data['clientmsgid']})
+            voiceReq = WechatMsg(
+                token=CONST_PROTOCOL_DICT['machine_code'],
+                version=CONST_PROTOCOL_DICT['version'],
+                timeStamp=get_time_stamp(),
+                iP=get_public_ip(),
+                baseMsg=BaseMsg(
+                    cmd=128,
+                    user=v_user,
+                    payloads=payloadJson.encode('utf-8'),
+            ))
+            import binascii
+            print binascii.b2a_hex(v_user.sessionKey)
+            voiceRsp = grpc_client.send(voiceReq)
+            (grpc_buffers, seq) = grpc_utils.get_seq_buffer(voiceRsp)
+
+            if not grpc_buffers:
+                logger.info("%s: grpc返回错误" % v_user.nickname)
+                self.wechat_client.close_when_done()
+                return False
+            buffers = self.wechat_client.sync_send_and_return(grpc_buffers)
+
+            if not buffers:
+                logger.info("%s: buffers为空" % v_user.nickname)
+                self.wechat_client.close_when_done()
+                return False
+
+            if ord(buffers[16]) != 191:
+                logger.info("%s: 微信返回错误" % v_user.nickname)
+                self.wechat_client.close_when_done()
+                return False
+            voiceRsp.baseMsg.cmd = -128
+            voiceRsp.baseMsg.payloads = buffers
+            voiceRsp = grpc_client.send(voiceRsp)
+            voicedata += voiceRsp.baseMsg.payloads
+            startpos += len(voicedata)
+
+        with open('%s-voice.silk'%v_user.userame, 'wb') as f:
+            f.write(voicedata)
+
+        logging.info("%s: 语音下载完毕！" % v_user.nickname)
+        self.wechat_client.close_when_done()
+        return True
 
 if __name__ == "__main__":
 
