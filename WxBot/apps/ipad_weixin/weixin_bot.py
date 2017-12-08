@@ -899,8 +899,8 @@ class WXBot(object):
                 payloads=payLoadJson.encode('utf-8')
             )
         )
-        import binascii
-        print binascii.b2a_hex(v_user.sessionKey)
+        # import binascii
+        # print binascii.b2a_hex(v_user.sessionKey)
         send_text_rsp = grpc_client.send(send_text_req)
 
         (grpc_buffers, seq) = grpc_utils.get_seq_buffer(send_text_rsp)
