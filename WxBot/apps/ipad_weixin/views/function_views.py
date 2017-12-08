@@ -136,15 +136,18 @@ class AddProductionChatroom(View):
             return HttpResponse(json.dumps({"ret": 0, "reason": "chatroom_list为空"}))
         for chatroom_username in chatroom_list:
             # 用户总群禁止添加
-            if ForbiddenChatRoom.objects.get(username=chatroom_username):
-                continue
-            wxuser_chatroom = Wxuser_Chatroom.objects.get(
-                chatroom__username=chatroom_username, wxuser__username=wx_username
-            )
+            try:
+                forbidden_chatroom = ForbiddenChatRoom.objects.get(username=chatroom_username)
+                if forbidden_chatroom:
+                    continue
+            except Exception as e:
+                wxuser_chatroom = Wxuser_Chatroom.objects.get(
+                    chatroom__username=chatroom_username, wxuser__username=wx_username
+                )
 
-            wxuser_chatroom.is_send = True
-            wxuser_chatroom.is_search = True
-            wxuser_chatroom.save()
+                wxuser_chatroom.is_send = True
+                wxuser_chatroom.is_search = True
+                wxuser_chatroom.save()
         return HttpResponse(json.dumps({"ret": 1, "reason": "添加生产群成功"}))
 
 
