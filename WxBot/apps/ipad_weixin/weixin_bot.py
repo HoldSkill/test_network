@@ -1078,24 +1078,29 @@ class WXBot(object):
                 # self.wechat_client.close_when_done()
                 # return False
 
-            buffers = self.wechat_client.sync_send_and_return(grpc_buffers, time_out=3)
+            #===================
+            # adam :2017.12.11
+            # buffers = self.wechat_client.sync_send_and_return(grpc_buffers, time_out=3)
+            self.wechat_client.push(grpc_buffers)
 
-            if not buffers:
-                logger.info("%s: buffers为空" % v_user.nickname)
-            # while not buffers:
-            #     buffers = self.wechat_client.get_packaget_by_seq(seq)
-
-            if ord(buffers[16]) != 191:
-                logger.info("%s: 微信返回错误" % v_user.nickname)
-                logger.info("%s: 图片发送失败" % v_user.nickname)
-                # self.wechat_client.close_when_done()
-                # return False
-            else:
-                logger.info(
-                    '{0} 向 {1} 发送图片, 共{2}次, 第{3}次发送成功'.format(v_user.nickname, user_name, total_send_nums, send_num))
+            # if not buffers:
+            #     logger.info("%s: buffers为空" % v_user.nickname)
+            # # while not buffers:
+            # #     buffers = self.wechat_client.get_packaget_by_seq(seq)
+            #
+            # if ord(buffers[16]) != 191:
+            #     logger.info("%s: 微信返回错误" % v_user.nickname)
+            #     logger.info("%s: 图片发送失败" % v_user.nickname)
+            #     # self.wechat_client.close_when_done()
+            #     # return False
+            # else:
+            logger.info(
+                '{0} 向 {1} 发送图片, 共{2}次, 第{3}次发送成功'.format(v_user.nickname, user_name, total_send_nums, send_num))
+            #====================
 
             start_pos = start_pos + count
             send_num += 1
+            time.sleep(1)
         self.wechat_client.close_when_done()
         return True
 
