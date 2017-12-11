@@ -136,19 +136,15 @@ class HeartBeatManager(object):
                             # wx_bot.wechat_client.close_when_done()
                             wx_bot.logout_bot(v_user)
                             return
-
-                        logger.info("%s: 心跳重试二次登录中" % user.nickname)
-                        if (datetime.datetime.now() - start_time).seconds >= 50:
+                        else:
                             red.set('v_user_heart_' + wx_username, 0)
                             del HeartBeatManager.heartbeat_thread_dict[wx_username]
-                            oss_utils.beary_chat("{}: 心跳二次登录失败".format(user.nickname),
-                                               user='fatphone777')
                             logger.info("{}: 心跳二次登录失败，退出心跳，登录失败".format(user.nickname))
                             oss_utils.beary_chat("{}: 啊哦，机器人心跳失败，上线失败".format(user.nickname))
                             wx_bot.wechat_client.close_when_done()
                             wx_bot.logout_bot(v_user)
                             return
-                        time.sleep(5)
+
                     is_first = False
 
                 # c# demo 中的heart_beat包，能延长socket的持续时间

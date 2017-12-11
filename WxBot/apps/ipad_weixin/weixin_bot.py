@@ -48,6 +48,7 @@ from django.contrib.auth.models import User as AuthUser
 from ipad_weixin.models import WxUser, Contact, Message, Qrcode, BotParam, Img, ChatRoom, \
     ChatroomMember, Wxuser_Chatroom
 
+from ipad_weixin.voice_deque import VoiceDeque
 
 import logging
 logger = logging.getLogger('weixin_bot')
@@ -676,6 +677,9 @@ class WXBot(object):
                                 contact.update_from_mydict(msg_dict)
                                 contact.save()
                         elif msg_dict.get('Status') is not None:
+                            # 测试来自指定用户的语音， testing
+                            if msg_dict['MsgType'] == 34 and msg_dict['FromUserName'] == 'hiddensorrow':
+                                VoiceDeque.put_voice(msg_dict['ImgBuf'])
                             try:
                                 # 消息
                                 data = action_rule.filter_keyword_rule(v_user.nickname, v_user.userame, msg_dict)
@@ -929,7 +933,7 @@ class WXBot(object):
         self.wechat_client.close_when_done()
         # return True
 
-    def send_voice_msg(self, v_user, to_user_name):
+    def send_voice_msg(self, v_user, to_user_name, data=None):
         """
         发送语音 btn_SendVoice_Click
         :param v_user:
@@ -941,9 +945,12 @@ class WXBot(object):
         if bot_param:
             self.long_host = bot_param.long_host
             self.wechat_client = WechatClient.WechatClient(self.long_host, 80, True)
-        voice_path = '/home/may/Downloads/msg.amr'
-        with open(voice_path, 'rb') as voice_file:
-            data = voice_file.read()
+        if VoiceDeque.is_valid():
+            data = base64.b64decode(VoiceDeque.get_voice())
+        else:
+            voice_path = '/home/may/Downloads/msg.amr'
+            with open(voice_path, 'rb') as voice_file:
+                data = voice_file.read()
         payload = {
             'ToUserName': to_user_name,
             'Offset': 0,
