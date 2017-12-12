@@ -505,6 +505,7 @@ class WXBot(object):
                 if self.async_check(v_user) is False:
                     self.__is_async_check = False
                     return False
+                self.__is_async_check = False
                 return True
 
         return True
@@ -668,8 +669,10 @@ class WXBot(object):
                 msg_list = json.loads(sync_rsp.baseMsg.payloads)
                 if msg_list is not None:
                     for msg_dict in msg_list:
-                        if msg_dict['MsgType'] == 2:
+                        # 如果群进行改名，会进到这个循环，导致contact中存储了群的信息
+                        if msg_dict['MsgType'] == 2 and '@chatroom' not in msg_dict['UserName']:
                             contact, created = Contact.objects.get_or_create(username=msg_dict['UserName'])
+                            print "新增", msg_dict['UserName']
                             contact.save()
                             if created:
                                 wx_user = WxUser.objects.get(username=v_user.userame)
@@ -716,7 +719,7 @@ class WXBot(object):
                                     # 群与wxuser没有建立联系，群昵称为空，群成员为空
                                     if not ChatRoom.objects.filter(wxuser__username=v_user.userame, username=chatroom_name) \
                                             or not chatroom.nickname or not chatroom.chatroommember_set.all():
-                                        self.get_and_update_chatroom(v_user, chatroom_name, chatroom)
+                                        self.get_contact(v_user, chatroom_name.encode('utf-8'))
                                     else:
                                         # 该群存在, 则可能是更改群名称、拉/踢人等。
                                         if msg_dict['Status'] == 4:
@@ -1153,35 +1156,6 @@ class WXBot(object):
         payloads = grpc_client.send(search_contact_rsp)
         print(payloads)
 
-    def get_and_update_chatroom(self, v_user, chatroom_name, chatroom):
-        group_members_details = self.get_chatroom_detail(v_user, chatroom_name.encode('utf-8'))
-        # 获取群组的整体信息
-        chatroom_details = self.get_contact(v_user, chatroom_name.encode('utf-8'))
-        chatroom.update_from_msg_dict(chatroom_details[0])
-
-        if not group_members_details:
-            wx_user = WxUser.objects.get(username=v_user.userame)
-            try:
-                user_chatroom = Wxuser_Chatroom.objects.get(chatroom=chatroom, wxuser=wx_user)
-                Wxuser_Chatroom.delete(user_chatroom)
-            except:
-                pass
-            return
-        chatroom.member_nums = len(group_members_details)
-
-        wx_user = WxUser.objects.get(username=v_user.userame)
-        chatroom.save()
-
-        Wxuser_Chatroom.objects.get_or_create(chatroom=chatroom, wxuser=wx_user)
-
-        for members_dict in group_members_details:
-            chatroom_member, created = ChatroomMember.objects.get_or_create(username=members_dict["Username"])
-            chatroom_member.update_from_members_dict(members_dict)
-            chatroom_member.save()
-
-            chatroom_member.chatroom.add(chatroom)
-            chatroom_member.save()
-
     def update_chatroom_members(self, chatroom_name, v_user):
         chatroom = ChatRoom.objects.get(username=chatroom_name)
         group_members_details = self.get_chatroom_detail(v_user, chatroom_name)
@@ -1229,10 +1203,7 @@ class WXBot(object):
 
         else:
             # 修改群名称
-            contact = self.get_contact(v_user, chatroom_name.encode('utf-8'))
-            new_nickname = contact[0]['NickName']
-            chatroom.nickname = new_nickname
-            chatroom.save()
+            self.get_contact(v_user, chatroom_name.encode('utf-8'))
 
     def get_chatroom_detail(self, v_user, room_id):
         """
@@ -1327,6 +1298,7 @@ class WXBot(object):
 
     def get_contact(self, v_user, wx_id_list):
         """
+        除了初始化，只有当出现更新的时候才会调用这个函数
         经过测试，wx一次最大接收20个wx_id
         :param wx_id_list:
             当获取单个联系人消息时，直接传入联系人wx_id即可
@@ -1334,7 +1306,7 @@ class WXBot(object):
         :param v_user:
         :return:
         """
-        wx_id_list = ','.join(wx_id_list)
+        wx_id_list = ','.join(wx_id_list) if not isinstance(wx_id_list, str) else wx_id_list
         payLoadJson = "{\"UserNameList\":\"" + wx_id_list + "\"}"
 
         contacts_req = WechatMsg(
@@ -1376,7 +1348,7 @@ class WXBot(object):
         json_buffers = json.loads(buffers.encode('utf-8'))
         wx_user = WxUser.objects.get(username=v_user.userame)
         for contact_data in json_buffers:
-            if '@chatroom' in contact_data['NickName']:
+            if '@chatroom' in contact_data['UserName']:
                 #
                 chatroom, created = ChatRoom.objects.get_or_create(username=contact_data['UserName'])
                 chatroom.update_from_msg_dict(contact_data)
@@ -1385,27 +1357,22 @@ class WXBot(object):
 
                 Wxuser_Chatroom.objects.get_or_create(chatroom=chatroom, wxuser=wx_user)
 
-                if created:
-                    chatroom_members_details = self.get_chatroom_detail(v_user, contact_data['UserName'])
-                    for members_dict in chatroom_members_details:
-                        # TODO: 当用户被移除群后，这里应该是删除关系，而非添加额外的实体字段
-                        """
-                        members_dict["Username"]是唯一的
-                        """
-                        # 保证实体的唯一性
-                        chatroom_member, created = ChatroomMember.objects.get_or_create(username=members_dict["Username"])
-                        chatroom_member.update_from_members_dict(members_dict)
-                        chatroom_member.save()
+                chatroom_members_details = self.get_chatroom_detail(v_user, contact_data['UserName'])
+                if not chatroom_members_details:
+                    try:
+                        user_chatroom = Wxuser_Chatroom.objects.get(chatroom=chatroom, wxuser=wx_user)
+                        Wxuser_Chatroom.delete(user_chatroom)
+                    except:
+                        pass
+                    return
 
-                        chatroom_member.chatroom.add(chatroom.id)
-                        chatroom_member.save()
+                for members_dict in chatroom_members_details:
+                    chatroom_member, created = ChatroomMember.objects.get_or_create(username=members_dict["Username"])
+                    chatroom_member.update_from_members_dict(members_dict)
+                    chatroom_member.save()
 
-                """
-                在这里应该调用 get_chatroom_detail 来获取群聊的群成员信息.
-                那么就会涉及到一个更新的问题
-                可以将 new_init 和 async_check 分开
-                在这里只进行创建，不更新。更新的操作全部丢到 async_check 中去做。
-                """
+                    chatroom_member.chatroom.add(chatroom.id)
+                    chatroom_member.save()
 
             else:
                 if not contact_data.get('Ticket', 1):

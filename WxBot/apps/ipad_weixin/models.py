@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from django.dispatch import receiver
 from django.db.models.signals import post_save
+import json
 
 import logging
 logger = logging.getLogger('django_models')
@@ -235,7 +236,7 @@ class ChatRoom(models.Model):
         self.alias = msg_dict['Alias']
         self.chat_room_owner = msg_dict['ChatRoomOwner']
         self.chat_room_version = msg_dict['ChatroomVersion']
-        self.member_nums = len(msg_dict['ExtInfo'].split(','))
+        self.member_nums = len(json.loads(msg_dict['ExtInfo'].encode('utf-8')))
 
     def __unicode__(self):
         return self.nickname
