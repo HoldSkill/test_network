@@ -32,5 +32,6 @@ def sendMsg(wx_id, chatroom_id, data, at_user_id=''):
                     item = item.replace('\r', '\\r').replace('\n', '\\n')
                 wx_bot.send_text_msg(chatroom_id, item, v_user, at_user_id)
         except Exception as e:
+            logger.error(str(e))
             logger.error("WxUser: {0}准备向群id: {1} 发送消息出现异常, 原因: {2}".format(wx_id, chatroom_id, e.message))
 
