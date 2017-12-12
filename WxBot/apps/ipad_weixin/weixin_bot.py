@@ -45,6 +45,7 @@ from ipad_weixin.utils.common_utils import get_time_stamp, read_int, int_list_co
 from ipad_weixin.rule import action_rule
 
 from django.contrib.auth.models import User as AuthUser
+from django.db import connection
 from ipad_weixin.models import WxUser, Contact, Message, Qrcode, BotParam, Img, ChatRoom, \
     ChatroomMember, Wxuser_Chatroom
 
@@ -927,6 +928,7 @@ class WXBot(object):
         else:
             logger.info('{0} 向 {1} 发送文字信息:成功'.format(v_user.nickname, user_name, content))
 
+        connection.close()
         self.wechat_client.close_when_done()
         # return True
 
@@ -1100,6 +1102,7 @@ class WXBot(object):
             start_pos = start_pos + count
             send_num += 1
         self.wechat_client.close_when_done()
+        connection.close()
         return True
 
     def retry_send_img(self, img_msg_req):
