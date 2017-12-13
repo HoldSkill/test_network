@@ -45,7 +45,8 @@ INSTALLED_APPS = [
     'ipad_weixin',
     'xadmin',
     'crispy_forms',
-    'corsheaders' # 跨域解决方案
+    'corsheaders',  # 跨域解决方案
+    'raven.contrib.django.raven_compat',
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -272,4 +273,8 @@ LOGGING = {
             'propagate': True
         }
     }
+}
+
+RAVEN_CONFIG = {
+    'dsn': 'https://9ae6a41b29794fd68b6fce1e95696b3b:99107df7f8e84ff2a5457d460de2883a@sentry.io/258668',
 }
