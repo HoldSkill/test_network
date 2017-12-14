@@ -1651,7 +1651,7 @@ class WXBot(object):
                         if int(heart_status) is not 1:
                             red.set('v_user_heart_' + str(qr_code['Username']), 0)
                             from ipad_weixin.heartbeat_manager import HeartBeatManager
-                            HeartBeatManager.begin_heartbeat(v_user.userame)
+                            HeartBeatManager.begin_heartbeat(v_user.userame, md_username)
                         else:
                             logger.info("%s: 心跳已经存在" % md_username)
                             oss_utils.beary_chat("%s: 心跳已经存在，无需启动心跳" % md_username)
@@ -1659,7 +1659,7 @@ class WXBot(object):
                     else:
                         red.set('v_user_heart_' + str(qr_code['Username']), 0)
                         from ipad_weixin.heartbeat_manager import HeartBeatManager
-                        HeartBeatManager.begin_heartbeat(v_user.userame)
+                        HeartBeatManager.begin_heartbeat(v_user.userame, md_username)
                     return True
 
             if self.confirm_qrcode_login(qr_code, md_username, keep_heart_beat=False) == -301:
@@ -1680,7 +1680,7 @@ class WXBot(object):
                             if int(heart_status) is not 1:
                                 red.set('v_user_heart_' + str(qr_code['Username']), 0)
                                 from ipad_weixin.heartbeat_manager import HeartBeatManager
-                                HeartBeatManager.begin_heartbeat(v_user.userame)
+                                HeartBeatManager.begin_heartbeat(v_user.userame, md_username)
                             else:
                                 logger.info("%s: 心跳已经存在" % md_username)
                                 oss_utils.beary_chat("%s: 心跳已经存在，无需启动心跳" % md_username)
@@ -1688,7 +1688,7 @@ class WXBot(object):
                         else:
                             red.set('v_user_heart_' + str(qr_code['Username']), 0)
                             from ipad_weixin.heartbeat_manager import HeartBeatManager
-                            HeartBeatManager.begin_heartbeat(v_user.userame)
+                            HeartBeatManager.begin_heartbeat(v_user.userame, md_username)
                         return True
                 else:
                     logger.info("GG 重新登录吧大兄弟")

@@ -31,13 +31,13 @@ class HeartBeatManager(object):
         print '[{}]'.format(title) + msg
 
     @staticmethod
-    def begin_heartbeat(vx_username):
+    def begin_heartbeat(vx_username, md_username):
         if vx_username in HeartBeatManager.heartbeat_thread_dict.keys():
             t = HeartBeatManager.heartbeat_thread_dict[vx_username]
             if t.isAlive():
                 return
 
-        t = threading.Thread(target=HeartBeatManager.heartbeat, name=vx_username, args=(vx_username,))
+        t = threading.Thread(target=HeartBeatManager.heartbeat, name=vx_username, args=(vx_username, md_username))
         HeartBeatManager.heartbeat_thread_dict[vx_username] = t
         t.setDaemon(True)
         t.start()
@@ -54,7 +54,7 @@ class HeartBeatManager(object):
         pass
 
     @classmethod
-    def heartbeat(cls, wx_username):
+    def heartbeat(cls, wx_username, md_username):
         is_first = True
         wx_bot = weixin_bot.WXBot()
 
@@ -131,6 +131,8 @@ class HeartBeatManager(object):
                         elif res_auto is 'Logout':
                             red.set('v_user_heart_' + wx_username, 0)
                             del HeartBeatManager.heartbeat_thread_dict[wx_username]
+                            auth_user = User.objects.filter(username=md_username).first()
+                            user.user.remove(auth_user)
                             logger.info("{}: 用户主动退出登录，退出心跳，机器人下线".format(user.nickname))
                             oss_utils.beary_chat("{0}: 用户主动退出登录，退出机器人".format(user.nickname))
                             # wx_bot.wechat_client.close_when_done()
@@ -139,6 +141,8 @@ class HeartBeatManager(object):
                         else:
                             red.set('v_user_heart_' + wx_username, 0)
                             del HeartBeatManager.heartbeat_thread_dict[wx_username]
+                            auth_user = User.objects.filter(username=md_username).first()
+                            user.user.remove(auth_user)
                             logger.info("{}: 心跳二次登录失败，退出心跳，登录失败".format(user.nickname))
                             oss_utils.beary_chat("{}: 啊哦，机器人心跳失败，上线失败".format(user.nickname))
                             wx_bot.wechat_client.close_when_done()
