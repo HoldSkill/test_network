@@ -38,13 +38,16 @@ from grpc_module import grpc_client
 
 from ipad_weixin.utils import common_utils
 from ipad_weixin.tcp_module import WechatClient
+from ipad_weixin.tcp_module.Wechat_client_modify import WechatClientTest
 from ipad_weixin.utils import grpc_utils
 from ipad_weixin.utils import oss_utils
 from ipad_weixin.utils.common_utils import get_time_stamp, read_int, int_list_convert_to_byte_list, char_to_str, \
     check_buffer_16_is_191, get_public_ip, check_grpc_response, get_md5
+from ipad_weixin.utils.wechatmsg_utils import MsgReq
 from ipad_weixin.rule import action_rule
 
 from django.contrib.auth.models import User as AuthUser
+from django.db import connection
 from ipad_weixin.models import WxUser, Contact, Message, Qrcode, BotParam, Img, ChatRoom, \
     ChatroomMember, Wxuser_Chatroom
 
@@ -933,6 +936,7 @@ class WXBot(object):
         else:
             logger.info('{0} 向 {1} 发送文字信息:成功'.format(v_user.nickname, user_name, content))
 
+        connection.close()
         self.wechat_client.close_when_done()
         # return True
 
@@ -1009,7 +1013,7 @@ class WXBot(object):
         bot_param = BotParam.objects.filter(username=v_user.userame).first()
         if bot_param:
             self.long_host = bot_param.long_host
-            self.wechat_client = WechatClient.WechatClient(self.long_host, 80, True)
+            self.wechat_client = WechatClientTest(self.long_host, 80, True)
 
         try:
             data = urllib2.urlopen(url).read()
@@ -1067,20 +1071,10 @@ class WXBot(object):
             }
             pay_load_json = json.dumps(payLoadJson)
 
-            print("Send Img Block {}".format(count))
-            print("start_pos is {}".format(start_pos))
-            print("data_total_length is {}".format(data_total_length))
-            img_msg_req = WechatMsg(
-                token=CONST_PROTOCOL_DICT['machine_code'],
-                version=CONST_PROTOCOL_DICT['version'],
-                timeStamp=get_time_stamp(),
-                iP=get_public_ip(),
-                baseMsg=BaseMsg(
-                    cmd=110,
-                    user=v_user,
-                    payloads=pay_load_json.encode('utf-8'),
-                )
-            )
+            # print("Send Img Block {}".format(count))
+            # print("start_pos is {}".format(start_pos))
+            # print("data_total_length is {}".format(data_total_length))
+            img_msg_req = MsgReq(110, v_user=v_user, pay_load_json=pay_load_json)
 
             img_msg_rsp = grpc_client.send(img_msg_req)
             (grpc_buffers, seq) = grpc_utils.get_seq_buffer(img_msg_rsp)
@@ -1090,25 +1084,33 @@ class WXBot(object):
                 # self.wechat_client.close_when_done()
                 # return False
 
-            buffers = self.wechat_client.sync_send_and_return(grpc_buffers, time_out=3)
+            #===================
+            # adam :2017.12.11
+            # buffers = self.wechat_client.sync_send_and_return(grpc_buffers, time_out=3)
 
-            if not buffers:
-                logger.info("%s: buffers为空" % v_user.nickname)
-            # while not buffers:
-            #     buffers = self.wechat_client.get_packaget_by_seq(seq)
-
-            if ord(buffers[16]) != 191:
-                logger.info("%s: 微信返回错误" % v_user.nickname)
-                logger.info("%s: 图片发送失败" % v_user.nickname)
-                # self.wechat_client.close_when_done()
-                # return False
-            else:
-                logger.info(
-                    '{0} 向 {1} 发送图片, 共{2}次, 第{3}次发送成功'.format(v_user.nickname, user_name, total_send_nums, send_num))
+            # if not buffers:
+            #     logger.info("%s: buffers为空" % v_user.nickname)
+            # # while not buffers:
+            # #     buffers = self.wechat_client.get_packaget_by_seq(seq)
+            #
+            # if ord(buffers[16]) != 191:
+            #     logger.info("%s: 微信返回错误" % v_user.nickname)
+            #     logger.info("%s: 图片发送失败" % v_user.nickname)
+            #     # self.wechat_client.close_when_done()
+            #     # return False
+            # else:
+            # 传入func_name供回调
+            func_name = sys._getframe().f_code.co_name
+            self.wechat_client.asyn_send(grpc_buffers, {"nickname": v_user.nickname, "send_num": send_num, 'func':func_name})
+            logger.info(
+                '{0} 向 {1} 发送图片, 第 {3} 次, 共 {2} 次.'.format(v_user.nickname, user_name, total_send_nums, send_num))
+            #====================
 
             start_pos = start_pos + count
             send_num += 1
+            time.sleep(1)
         self.wechat_client.close_when_done()
+        connection.close()
         return True
 
     def retry_send_img(self, img_msg_req):
@@ -1921,7 +1923,7 @@ if __name__ == "__main__":
                 v_user = pickle.loads(v_user_pickle)
                 #给谁发，谁发的，图片url
                 wx_bot.send_img_msg('wxid_9zoigugzqipj21', v_user,
-                                    "http://oss2.lanlanlife.com/1943bf8561ac2556d04c1b4078130ce1_800x800.jpg?x-oss-process=image/resize,w_600")
+                                    "http://md-oss.di25.cn/7730f412-d4e3-11e7-b4a3-1c1b0d3e23eb.jpeg")
 
             elif cmd == 3:
                 v_user_pickle = red.get('v_user_' + wx_user)

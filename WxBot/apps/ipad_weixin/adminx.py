@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from ipad_weixin.models import SignInRule, WxUser, ChatRoom, PlatformInformation, Wxuser_Chatroom
+from ipad_weixin.models import SignInRule, WxUser, ChatRoom, PlatformInformation, Wxuser_Chatroom, ForbiddenChatRoom
 import xadmin
 from xadmin import views
 
@@ -48,3 +48,7 @@ class WxuserChatroomAdmin(object):
 xadmin.site.register(Wxuser_Chatroom, WxuserChatroomAdmin)
 
 
+class ForbiddenChatroomAdmin(object):
+    list_display = ['username']
+
+xadmin.site.register(ForbiddenChatRoom, ForbiddenChatroomAdmin)

@@ -10,7 +10,8 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 
 from ipad_weixin.weixin_bot import WXBot
-from ipad_weixin.models import Qrcode, WxUser, ChatRoom, SignInRule, PushRecord, PlatformInformation, Wxuser_Chatroom
+from ipad_weixin.models import Qrcode, WxUser, ChatRoom, SignInRule, PushRecord, PlatformInformation, Wxuser_Chatroom, \
+    ForbiddenChatRoom
 from ipad_weixin.heartbeat_manager import HeartBeatManager
 from ipad_weixin.send_msg_type import sendMsg
 from ipad_weixin.utils.oss_utils import beary_chat
@@ -137,15 +138,18 @@ class AddProductionChatroom(View):
             return HttpResponse(json.dumps({"ret": 0, "reason": "chatroom_list为空"}))
         for chatroom_username in chatroom_list:
             # 用户总群禁止添加
-            if chatroom_username == "6606855231@chatroom":
-                continue
-            wxuser_chatroom = Wxuser_Chatroom.objects.get(
-                chatroom__username=chatroom_username, wxuser__username=wx_username
-            )
+            try:
+                forbidden_chatroom = ForbiddenChatRoom.objects.get(username=chatroom_username)
+                if forbidden_chatroom:
+                    continue
+            except Exception as e:
+                wxuser_chatroom = Wxuser_Chatroom.objects.get(
+                    chatroom__username=chatroom_username, wxuser__username=wx_username
+                )
 
-            wxuser_chatroom.is_send = True
-            wxuser_chatroom.is_search = True
-            wxuser_chatroom.save()
+                wxuser_chatroom.is_send = True
+                wxuser_chatroom.is_search = True
+                wxuser_chatroom.save()
         return HttpResponse(json.dumps({"ret": 1, "reason": "添加生产群成功"}))
 
 
@@ -213,7 +217,7 @@ class DefineSignRule(View):
 class SendGroupMessageVIew(View):
     """
     接口： s-prod-04.qunzhu666.com/api/robot/send_group_msg/
-    向所有已登录mmt平台用户的所有生产群中发送消息
+    向所有已登录mmt平台用户的所有生产群中发送消息， 群发消息中不应含有任何关于pid等信息
     """
     def post(self, request):
         req_dict = json.loads(request.body)
@@ -270,6 +274,8 @@ class GetRoomQrcode(View):
                 response_data = {"qrcode_url": oss_path, "chatroom_name": chatroom.nickname}
                 return HttpResponse(json.dumps(response_data), content_type="application/json")
         return HttpResponse(json.dumps({"ret": 0, "data": "用户无效哦"}))
+
+
 
 
 

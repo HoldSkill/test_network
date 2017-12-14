@@ -340,4 +340,13 @@ class PlatformInformation(models.Model):
     is_customer_server = models.BooleanField(default=False)
 
 
+class ForbiddenChatRoom(models.Model):
+    username = models.CharField(max_length=200, unique=True)
+
+    class Meta:
+        verbose_name = u"禁止发单群组"
+        verbose_name_plural = verbose_name
+
+
+
 

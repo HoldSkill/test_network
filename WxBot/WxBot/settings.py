@@ -45,7 +45,8 @@ INSTALLED_APPS = [
     'ipad_weixin',
     'xadmin',
     'crispy_forms',
-    'corsheaders' # 跨域解决方案
+    'corsheaders',  # 跨域解决方案
+    'raven.contrib.django.raven_compat',
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -88,10 +89,13 @@ WSGI_APPLICATION = 'WxBot.wsgi.application'
 REDIS_PORT = 50002
 REDIS_SERVER = 's-poc-01.qunzhu666.com'
 
+# REDIS_PORT = 6379
+# REDIS_SERVER = 'localhost'
+
 CACHES = {
     'default': {
         'BACKEND': 'redis_cache.RedisCache',
-        'LOCATION': 'redis://'+ REDIS_SERVER +':' + str(REDIS_PORT),
+        'LOCATION': 'redis://' + REDIS_SERVER + ':' + str(REDIS_PORT),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
@@ -269,4 +273,8 @@ LOGGING = {
             'propagate': True
         }
     }
+}
+
+RAVEN_CONFIG = {
+    'dsn': 'https://9ae6a41b29794fd68b6fce1e95696b3b:99107df7f8e84ff2a5457d460de2883a@sentry.io/258668',
 }
