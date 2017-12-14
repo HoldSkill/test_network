@@ -117,7 +117,7 @@ DATABASES = {
         'OPTIONS': {'charset': 'utf8mb4'},
         'NAME': 'weixinbot',
         'USER': 'root',
-        'PASSWORD': 'keyerror',
+        'PASSWORD': 'maxwell',
     }
 }
 
