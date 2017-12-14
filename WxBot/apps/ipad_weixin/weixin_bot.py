@@ -675,7 +675,7 @@ class WXBot(object):
                         # 如果群进行改名，会进到这个循环，导致contact中存储了群的信息
                         if msg_dict['MsgType'] == 2 and '@chatroom' not in msg_dict['UserName']:
                             contact, created = Contact.objects.get_or_create(username=msg_dict['UserName'])
-                            print "新增", msg_dict['UserName']
+                            # print "新增", msg_dict['UserName']
                             contact.save()
                             if created:
                                 wx_user = WxUser.objects.get(username=v_user.userame)
@@ -683,9 +683,9 @@ class WXBot(object):
                                 contact.update_from_mydict(msg_dict)
                                 contact.save()
                         elif msg_dict.get('Status') is not None:
-                            # 测试来自指定用户的语音， testing
-                            if msg_dict['MsgType'] == 34 and msg_dict['FromUserName'] == 'hiddensorrow':
-                                VoiceDeque.put_voice(msg_dict['ImgBuf'])
+                            # # 测试来自指定用户的语音， testing
+                            # if msg_dict['MsgType'] == 34 and msg_dict['FromUserName'] == 'hiddensorrow':
+                            #     VoiceDeque.put_voice(msg_dict['ImgBuf'])
                             try:
                                 # 消息
                                 data = action_rule.filter_keyword_rule(v_user.nickname, v_user.userame, msg_dict)
@@ -801,9 +801,9 @@ class WXBot(object):
         new_init_rsp.baseMsg.payloads = char_to_str(buffers)
         new_init_rsp = grpc_client.send(new_init_rsp)
         # 打印出同步消息的结构体
-        msg_list = json.loads(new_init_rsp.baseMsg.payloads)
+        # msg_list = json.loads(new_init_rsp.baseMsg.payloads)
 
-        wx_user = WxUser.objects.get(username=v_user.userame)
+        # wx_user = WxUser.objects.get(username=v_user.userame)
 
         v_user = new_init_rsp.baseMsg.user
         v_user_pickle = pickle.dumps(v_user)
@@ -875,10 +875,10 @@ class WXBot(object):
             cur_chatroom_seq = contact['CurrentChatRoomContactSeq']
 
         # 一次只拉取25个用户的信息，待测试
-        print len(wx_id_list)
+        # print len(wx_id_list)
         for i in range(0, len(wx_id_list), 20):
             end = min(20, len(wx_id_list) - i)
-            print i, i+end-1
+            # print i, i+end-1
             self.get_contact(v_user, wx_id_list[i:i+end])
         return True
 
@@ -1355,7 +1355,7 @@ class WXBot(object):
                 chatroom, created = ChatRoom.objects.get_or_create(username=contact_data['UserName'])
                 chatroom.update_from_msg_dict(contact_data)
                 chatroom.save()
-                print "更新群", contact_data['NickName']
+                # print "更新群", contact_data['NickName']
 
                 Wxuser_Chatroom.objects.get_or_create(chatroom=chatroom, wxuser=wx_user)
 
@@ -1384,7 +1384,7 @@ class WXBot(object):
 
                     contact.wx_user.add(wx_user.id)
                     contact.save()
-                    print "更新", contact_data['NickName']
+                    # print "更新", contact_data['NickName']
                 else:
                     # 可能用户开启了好友验证，可以将该用户删除
                     stranger = Contact.objects.filter(username=contact_data['UserName']).first()
@@ -1392,8 +1392,8 @@ class WXBot(object):
                         # 删除好友关系
                         wx_user.contact_set.remove(stranger)
                         stranger.delete()
-                        print "删除", contact_data['NickName']
-                    print "ticket not 0!", contact_data['NickName']
+                    #     print "删除", contact_data['NickName']
+                    # print "ticket not 0!", contact_data['NickName']
                     pass
         logger.info('%s 获取联系人成功' % v_user.nickname)
         return True
