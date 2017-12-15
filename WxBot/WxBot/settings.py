@@ -86,11 +86,12 @@ WSGI_APPLICATION = 'WxBot.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/1.9/ref/settings/#databases
-REDIS_PORT = 50002
-REDIS_SERVER = 's-poc-01.qunzhu666.com'
+# REDIS_PORT = 50002
+# REDIS_SERVER = 's-poc-01.qunzhu666.com'
 
-# REDIS_PORT = 6379
-# REDIS_SERVER = 'localhost'
+REDIS_PORT = 6379
+REDIS_SERVER = 'localhost'
+
 
 CACHES = {
     'default': {

@@ -67,7 +67,8 @@ def filter_keyword_rule(nickname, wx_id, msg_dict):
                 }
                 # 该平台所对应处理搜索View的url
                 host_url = PlatformInformation.objects.get(platform_id=platform_id, is_customer_server=False).host_url
-                response = requests.post(host_url, data=json.dumps(request_data))
+                headers = {"Connection": "close"}
+                response = requests.post(host_url, data=json.dumps(request_data), headers=headers)
                 response_dict = json.loads(response.content)
                 data = response_dict["data"]
 
