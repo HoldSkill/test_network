@@ -1635,35 +1635,6 @@ class WXBot(object):
         qr_code = self.check_qrcode_login(qrcode_rsp, device_id, md_username)
         starttime = datetime.datetime.now()
         if qr_code is not False:
-
-            if self.confirm_qrcode_login(qr_code, md_username, keep_heart_beat=False):
-                oss_utils.beary_chat("%s 未进入check_and_confirm_and_load -301" % md_username)
-                v_user_pickle = red.get('v_user_' + str(qr_code['Username']))
-                v_user = pickle.loads(v_user_pickle)
-                self.new_init(v_user, md_username, platform_id)
-                if not self.newinitflag:
-                    v_user = pickle.loads(red.get('v_user_' + str(qr_code['Username'])))
-                    while not self.async_check(v_user):
-                        if (datetime.datetime.now() - starttime).seconds >= 100:
-                            return False
-                        time.sleep(3)
-
-                    heart_status = red.get('v_user_heart_' + str(qr_code['Username']))
-                    if heart_status:
-                        if int(heart_status) is not 1:
-                            red.set('v_user_heart_' + str(qr_code['Username']), 0)
-                            from ipad_weixin.heartbeat_manager import HeartBeatManager
-                            HeartBeatManager.begin_heartbeat(v_user.userame, md_username)
-                        else:
-                            logger.info("%s: 心跳已经存在" % md_username)
-                            oss_utils.beary_chat("%s: 心跳已经存在，无需启动心跳" % md_username)
-
-                    else:
-                        red.set('v_user_heart_' + str(qr_code['Username']), 0)
-                        from ipad_weixin.heartbeat_manager import HeartBeatManager
-                        HeartBeatManager.begin_heartbeat(v_user.userame, md_username)
-                    return True
-
             if self.confirm_qrcode_login(qr_code, md_username, keep_heart_beat=False) == -301:
                 oss_utils.beary_chat("%s 进入check_and_confirm_and_load -301" % md_username)
                 if self.confirm_qrcode_login(qr_code, md_username, keep_heart_beat=False):
@@ -1694,6 +1665,34 @@ class WXBot(object):
                         return True
                 else:
                     logger.info("GG 重新登录吧大兄弟")
+
+            if self.confirm_qrcode_login(qr_code, md_username, keep_heart_beat=False):
+                oss_utils.beary_chat("%s 未进入check_and_confirm_and_load -301" % md_username)
+                v_user_pickle = red.get('v_user_' + str(qr_code['Username']))
+                v_user = pickle.loads(v_user_pickle)
+                self.new_init(v_user, md_username, platform_id)
+                if not self.newinitflag:
+                    v_user = pickle.loads(red.get('v_user_' + str(qr_code['Username'])))
+                    while not self.async_check(v_user):
+                        if (datetime.datetime.now() - starttime).seconds >= 100:
+                            return False
+                        time.sleep(3)
+
+                    heart_status = red.get('v_user_heart_' + str(qr_code['Username']))
+                    if heart_status:
+                        if int(heart_status) is not 1:
+                            red.set('v_user_heart_' + str(qr_code['Username']), 0)
+                            from ipad_weixin.heartbeat_manager import HeartBeatManager
+                            HeartBeatManager.begin_heartbeat(v_user.userame, md_username)
+                        else:
+                            logger.info("%s: 心跳已经存在" % md_username)
+                            oss_utils.beary_chat("%s: 心跳已经存在，无需启动心跳" % md_username)
+
+                    else:
+                        red.set('v_user_heart_' + str(qr_code['Username']), 0)
+                        from ipad_weixin.heartbeat_manager import HeartBeatManager
+                        HeartBeatManager.begin_heartbeat(v_user.userame, md_username)
+                    return True
 
 
 

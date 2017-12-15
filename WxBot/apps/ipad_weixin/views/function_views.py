@@ -271,7 +271,7 @@ class GetRoomQrcode(View):
             else:
                 wxbot = WXBot()
                 oss_path=wxbot.get_room_qrcode(v_user, chatroom_id)
-                response_data = {"qrcode_url": oss_path, "chatroom_name": chatroom.nickname}
+                response_data = {"qrcode_url": oss_path, "chatroom_name": chatroom.nickname, "ret": 1}
                 return HttpResponse(json.dumps(response_data), content_type="application/json")
         return HttpResponse(json.dumps({"ret": 0, "data": "用户无效哦"}))
 
