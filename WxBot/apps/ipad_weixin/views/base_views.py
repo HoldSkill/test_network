@@ -11,6 +11,7 @@ from django.http import HttpResponse
 from django.views.generic.base import View
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
+from django.contrib.auth.models import User
 
 from ipad_weixin.weixin_bot import WXBot
 from ipad_weixin.models import Qrcode, WxUser, ChatRoom, SignInRule, PlatformInformation, Wxuser_Chatroom
@@ -138,10 +139,13 @@ class ResetHeartBeat(View):
             time.sleep(random_num)
             logger.info("%s command 开启心跳" % auth_user.nickname)
             # 清空心跳列表
-            md_username = Qrcode.objects.filter(username=auth_user.username).first().md_username
-            if auth_user.username in HeartBeatManager.heartbeat_thread_dict:
-                del HeartBeatManager.heartbeat_thread_dict[auth_user.username]
-            HeartBeatManager.begin_heartbeat(auth_user.username, md_username)
+            try:
+                md_username = User.objects.filter(wxuser=auth_user).first().username
+                if auth_user.username in HeartBeatManager.heartbeat_thread_dict:
+                    del HeartBeatManager.heartbeat_thread_dict[auth_user.username]
+                HeartBeatManager.begin_heartbeat(auth_user.username, md_username)
+            except Exception as e:
+                logger.error(e)
         return HttpResponse(json.dumps({"ret": 1}))
 
 
@@ -171,10 +175,14 @@ class ResetSingleHeartBeat(View):
                         cnt += 1
                         time.sleep(1)
             red.set('v_user_heart_' + username, 0)
-        md_username = Qrcode.objects.filter(username=username).first().md_username
-        if username in HeartBeatManager.heartbeat_thread_dict:
-            del HeartBeatManager.heartbeat_thread_dict[username]
-        HeartBeatManager.begin_heartbeat(username, md_username)
+        try:
+            auth_user = WxUser.objects.filter(username=username).first()
+            md_username = User.objects.filter(wxuser=auth_user).first().username
+            if username in HeartBeatManager.heartbeat_thread_dict:
+                del HeartBeatManager.heartbeat_thread_dict[username]
+            HeartBeatManager.begin_heartbeat(username, md_username)
+        except Exception as e:
+            logger.error(e)
         return HttpResponse(json.dumps({"ret": 1}))
 
 # use just for test
