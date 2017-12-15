@@ -15,6 +15,8 @@ from ipad_weixin.models import Qrcode, WxUser, ChatRoom, SignInRule, PushRecord,
 from ipad_weixin.heartbeat_manager import HeartBeatManager
 from ipad_weixin.send_msg_type import sendMsg
 from ipad_weixin.utils.oss_utils import beary_chat
+from ipad_weixin.settings import red
+import pickle
 
 import thread
 import random
@@ -252,6 +254,25 @@ class SendMMTMessageView(View):
                 wx_id = wxuser.username
                 sendMsg(wx_id, chatroom.username, text)
                 return HttpResponse(json.dumps({"ret": 1, "data": "发送订单信息完成"}))
+        return HttpResponse(json.dumps({"ret": 0, "data": "用户无效哦"}))
+
+
+class GetRoomQrcode(View):
+    def post(self, request):
+        req_dict = json.loads(request.body)
+        wx_id = req_dict['wx_id']
+        chatroom_id = req_dict['chatroom_id']
+        v_user_pickle = red.get('v_user_' + wx_id)
+        v_user = pickle.loads(v_user_pickle)
+        if v_user:
+            chatroom = ChatRoom.objects.filter(username=chatroom_id, wxuser__username=wx_id).first()
+            if not chatroom:
+                return HttpResponse(json.dumps({"ret":0, "reason":"用户不在该群中，请检查参数！"}))
+            else:
+                wxbot = WXBot()
+                oss_path=wxbot.get_room_qrcode(v_user, chatroom_id)
+                response_data = {"qrcode_url": oss_path, "chatroom_name": chatroom.nickname}
+                return HttpResponse(json.dumps(response_data), content_type="application/json")
         return HttpResponse(json.dumps({"ret": 0, "data": "用户无效哦"}))
 
 

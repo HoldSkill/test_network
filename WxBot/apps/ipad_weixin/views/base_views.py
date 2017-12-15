@@ -138,9 +138,10 @@ class ResetHeartBeat(View):
             time.sleep(random_num)
             logger.info("%s command 开启心跳" % auth_user.nickname)
             # 清空心跳列表
+            md_username = Qrcode.objects.filter(username=auth_user.username).first().md_username
             if auth_user.username in HeartBeatManager.heartbeat_thread_dict:
                 del HeartBeatManager.heartbeat_thread_dict[auth_user.username]
-            HeartBeatManager.begin_heartbeat(auth_user.username)
+            HeartBeatManager.begin_heartbeat(auth_user.username, md_username)
         return HttpResponse(json.dumps({"ret": 1}))
 
 
@@ -170,9 +171,10 @@ class ResetSingleHeartBeat(View):
                         cnt += 1
                         time.sleep(1)
             red.set('v_user_heart_' + username, 0)
+        md_username = Qrcode.objects.filter(username=username).first().md_username
         if username in HeartBeatManager.heartbeat_thread_dict:
             del HeartBeatManager.heartbeat_thread_dict[username]
-        HeartBeatManager.begin_heartbeat(username)
+        HeartBeatManager.begin_heartbeat(username, md_username)
         return HttpResponse(json.dumps({"ret": 1}))
 
 # use just for test
@@ -186,7 +188,9 @@ class test(View):
         if v_user:
             wx_bot = WXBot()
             # wx_bot.send_text_msg('6610815091@chatroom', 'hello, hello, hello', v_user)
-            wx_bot.send_voice_msg(v_user, '6610815091@chatroom')
+            # wx_bot.send_voice_msg(v_user, '6610815091@chatroom')
+            wx_bot.send_img_msg('6610815091@chatroom', v_user,
+                                "http://oss2.lanlanlife.com/1943bf8561ac2556d04c1b4078130ce1_800x800.jpg?x-oss-process=image/resize,w_600")
         return HttpResponse(json.dumps({"ret": 1}))
 
 class AddSuperUser(View):
