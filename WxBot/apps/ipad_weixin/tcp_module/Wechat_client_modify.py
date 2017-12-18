@@ -292,11 +292,16 @@ class WechatClientTest(asynchat.async_chat, object):
             continue
         while self.connected:
             for sent_packs in self.__sent_packge_info.keys():
-                if datetime.now()-self.__sent_packge_info[sent_packs]['time'] > timedelta(0,10,0):
-                    nickname = self.__sent_packge_info[sent_packs]['nickname']
-                    method_name = self.__sent_packge_info[sent_packs]['func']
-                    logger.warning(" {0} 执行 {1} 请求超时".format(nickname, method_name))
-                    self.__sent_packge_info.pop(sent_packs)
+                try:
+                    if datetime.now()-self.__sent_packge_info[sent_packs]['time'] > timedelta(0,10,0):
+                        nickname = self.__sent_packge_info[sent_packs]['nickname']
+                        method_name = self.__sent_packge_info[sent_packs]['func']
+                        logger.warning(" {0} 执行 {1} 请求超时".format(nickname, method_name))
+                        self.__sent_packge_info.pop(sent_packs)
+                except KeyError:
+                    pass
+                except Exception, e:
+                    logger.error(str(e)+' : ' + e.message)
             time.sleep(1)
 
     def __asyn_fetch(self):
