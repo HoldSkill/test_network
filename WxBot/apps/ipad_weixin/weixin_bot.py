@@ -1049,7 +1049,7 @@ class WXBot(object):
         send_num = 1
 
         logger.info('preparing sent img to {0}, length {1}'.format(user_name, data_total_length))
-        # print('preparing sent img to {0}, length {1}'.format(user_name, data_total_length))
+
         # 客户图像id
         client_img_id = v_user.userame + "_" + str(get_time_stamp())
         while start_pos != data_total_length:
@@ -1104,7 +1104,7 @@ class WXBot(object):
             self.wechat_client.asyn_send(grpc_buffers, {"nickname": v_user.nickname, "send_num": send_num, 'func':func_name})
             logger.info(
                 '{0} 向 {1} 发送图片, 第 {3} 次, 共 {2} 次.'.format(v_user.nickname, user_name, total_send_nums, send_num))
-            #====================
+
 
             start_pos = start_pos + count
             send_num += 1

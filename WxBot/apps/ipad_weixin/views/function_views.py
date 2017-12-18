@@ -267,10 +267,12 @@ class GetRoomQrcode(View):
         if v_user:
             chatroom = ChatRoom.objects.filter(username=chatroom_id, wxuser__username=wx_id).first()
             if not chatroom:
-                return HttpResponse(json.dumps({"ret":0, "reason":"用户不在该群中，请检查参数！"}))
+                return HttpResponse(json.dumps({"ret": 0, "reason": "用户不在该群中，请检查参数！"}))
             else:
                 wxbot = WXBot()
-                oss_path=wxbot.get_room_qrcode(v_user, chatroom_id)
+                oss_path = wxbot.get_room_qrcode(v_user, chatroom_id)
+                if not oss_path:
+                    return HttpResponse(json.dumps({"ret": 0, "reason": "机器人小小未登录"}))
                 response_data = {"qrcode_url": oss_path, "chatroom_name": chatroom.nickname, "ret": 1}
                 return HttpResponse(json.dumps(response_data), content_type="application/json")
         return HttpResponse(json.dumps({"ret": 0, "data": "用户无效哦"}))

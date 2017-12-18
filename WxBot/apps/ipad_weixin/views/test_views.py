@@ -21,7 +21,7 @@ class TestSendGroupMsgView(View):
     def post(self, request):
         req_dict = json.loads(request.body)
         data = req_dict["data"]
-        for i in range(1, 1000):
+        for i in range(1, 100):
             thread.start_new_thread(sendMsg, (wx_id, chatroom_id, data))
 
         return HttpResponse(json.dumps({"ret": 1}))
