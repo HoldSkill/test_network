@@ -811,24 +811,23 @@ class WXBot(object):
         if new_init_rsp.baseMsg.ret == 8888:
             try:
                 # 初始化起始位置都是0
-                if self.contact_init(v_user, 0, 0):
-                    wxuser = WxUser.objects.get(username=v_user.userame)
-                    """
-                    这里的逻辑就只有这么简单吗？
-                    假设 136xxx 登录了star_chain，使用 樂阳 登录ipad， 会产生哪些附加产品？
-                        auth_user表创建username=136xxx, first_name=platform_id, 并且添加WxUser的ManyToManyRelationship
-                    那么，136xxx如果想要登录 mmt 系统，并且用 mimi 登录ipad进行发单呢？
-                        此时136xxx的first_name为 mmt， 原有的微信机器人会变为在 mmt 进行发单
-                    """
-                    user, created = AuthUser.objects.get_or_create(username=md_username)
-                    user.first_name = platform_id
-                    user.save()
+                # if self.contact_init(v_user, 0, 0):
+                wxuser = WxUser.objects.get(username=v_user.userame)
+                """
+                这里的逻辑就只有这么简单吗？
+                假设 136xxx 登录了star_chain，使用 樂阳 登录ipad， 会产生哪些附加产品？
+                    auth_user表创建username=136xxx, first_name=platform_id, 并且添加WxUser的ManyToManyRelationship
+                那么，136xxx如果想要登录 mmt 系统，并且用 mimi 登录ipad进行发单呢？
+                    此时136xxx的first_name为 mmt， 原有的微信机器人会变为在 mmt 进行发单
+                """
+                user, created = AuthUser.objects.get_or_create(username=md_username)
+                user.first_name = platform_id
+                user.save()
 
-                    wxuser.user.add(user)
-                    wxuser.save()
-                    logger.info("%s 初始化成功！" % v_user.nickname)
-                else:
-                    return False
+                wxuser.user.add(user)
+                wxuser.save()
+                logger.info("%s 初始化成功！" % v_user.nickname)
+
             except Exception as e:
                 logger.error(e)
                 sys.exit(1)
@@ -880,6 +879,7 @@ class WXBot(object):
             end = min(20, len(wx_id_list) - i)
             # print i, i+end-1
             self.get_contact(v_user, wx_id_list[i:i+end])
+        logger.info("%s: 获取联系人完成！" % v_user.userame)
         return True
 
     def send_text_msg(self, user_name, content, v_user, at_user_id=''):

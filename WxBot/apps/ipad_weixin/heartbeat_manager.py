@@ -11,6 +11,8 @@ import threading
 from utils import oss_utils
 from models import *
 
+import threading
+
 import logging
 logger = logging.getLogger('weixin_bot')
 
@@ -112,44 +114,47 @@ class HeartBeatManager(object):
                     if is_first:
                         UUid = user.uuid
                         DeviceType = user.device_type
-                        start_time = datetime.datetime.now()
                         logger.info("%s: 进行心跳二次登录中" % user.nickname)
-                        while True:
-                            res_auto = wx_bot.auto_auth(v_user, UUid, DeviceType, False)
-                            if res_auto is True:
-                                if  wx_bot.set_user_login(wx_username):
-                                    wx_bot.open_notify_callback()
-                                    red.set('v_user_heart_' + wx_username, 1)
-                                    user = WxUser.objects.filter(username=wx_username).first()
-                                    logger.info("{}: 心跳二次登录成功".format(user.nickname))
-                                    oss_utils.beary_chat("{0}: 机器人已上线, 心跳开启成功--{1}, {2}, login为{3}".format(user.nickname,
-                                                                                                time.asctime(time.localtime(time.time())),
-                                                                                                user.username, user.login))
-                                else:
-                                    logger.info("{}: 用户设置login失败" % user.nickname)
-                                break
-                            elif res_auto is 'Logout':
-                                red.set('v_user_heart_' + wx_username, 0)
-                                del HeartBeatManager.heartbeat_thread_dict[wx_username]
-                                auth_user = User.objects.filter(username=md_username).first()
-                                user.user.remove(auth_user)
-                                logger.info("{}: 用户主动退出登录，退出心跳，机器人下线".format(user.nickname))
-                                oss_utils.beary_chat("{0}: 用户主动退出登录，退出机器人".format(user.nickname))
-                                # wx_bot.wechat_client.close_when_done()
-                                wx_bot.logout_bot(v_user)
-                                return
-                            else:
-                                red.set('v_user_heart_' + wx_username, 0)
-                                del HeartBeatManager.heartbeat_thread_dict[wx_username]
-                                auth_user = User.objects.filter(username=md_username).first()
-                                user.user.remove(auth_user)
-                                logger.info("{}: 心跳二次登录失败，退出心跳，登录失败".format(user.nickname))
-                                oss_utils.beary_chat("{}: 啊哦，机器人心跳失败，上线失败".format(user.nickname))
-                                wx_bot.wechat_client.close_when_done()
-                                wx_bot.logout_bot(v_user)
-                                return
-
+                        res_auto = wx_bot.auto_auth(v_user, UUid, DeviceType, False)
                         is_first = False
+                        if res_auto is True:
+                            if  wx_bot.set_user_login(wx_username):
+                                wx_bot.open_notify_callback()
+                                v_user = pickle.loads(red.get('v_user_' + wx_username))
+                                # contact_bot = weixin_bot.WXBot()
+                                t = threading.Thread(target=wx_bot.contact_init, args=(v_user, 0, 0))
+                                t.start()
+                                red.set('v_user_heart_' + wx_username, 1)
+                                user = WxUser.objects.filter(username=wx_username).first()
+                                logger.info("{}: 心跳二次登录成功".format(user.nickname))
+                                oss_utils.beary_chat("{0}: 机器人已上线, 心跳开启成功--{1}, {2}, login为{3}".format(user.nickname,
+                                                                                            time.asctime(time.localtime(time.time())),
+                                                                                            user.username, user.login))
+                            else:
+                                logger.info("{}: 用户设置login失败" % user.nickname)
+                                return
+                        elif res_auto is 'Logout':
+                            red.set('v_user_heart_' + wx_username, 0)
+                            del HeartBeatManager.heartbeat_thread_dict[wx_username]
+                            auth_user = User.objects.filter(username=md_username).first()
+                            user.user.remove(auth_user)
+                            logger.info("{}: 用户主动退出登录，退出心跳，机器人下线".format(user.nickname))
+                            oss_utils.beary_chat("{0}: 用户主动退出登录，退出机器人".format(user.nickname))
+                            # wx_bot.wechat_client.close_when_done()
+                            wx_bot.logout_bot(v_user)
+                            return
+                        else:
+                            red.set('v_user_heart_' + wx_username, 0)
+                            del HeartBeatManager.heartbeat_thread_dict[wx_username]
+                            auth_user = User.objects.filter(username=md_username).first()
+                            user.user.remove(auth_user)
+                            logger.info("{}: 心跳二次登录失败，退出心跳，登录失败".format(user.nickname))
+                            oss_utils.beary_chat("{}: 啊哦，机器人心跳失败，上线失败".format(user.nickname))
+                            wx_bot.wechat_client.close_when_done()
+                            wx_bot.logout_bot(v_user)
+                            return
+
+
 
                     # c# demo 中的heart_beat包，能延长socket的持续时间
                     # 但始终会断开
