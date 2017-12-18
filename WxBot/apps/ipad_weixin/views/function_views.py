@@ -219,6 +219,7 @@ class SendGroupMessageVIew(View):
     接口： s-prod-04.qunzhu666.com/api/robot/send_group_msg/
     向所有已登录mmt平台用户的所有生产群中发送消息， 群发消息中不应含有任何关于pid等信息
     """
+    @csrf_exempt
     def post(self, request):
         req_dict = json.loads(request.body)
         platform_id = req_dict['platform_id']
