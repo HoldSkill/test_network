@@ -832,7 +832,6 @@ class WXBot(object):
                 logger.error(e)
                 sys.exit(1)
 
-
             self.newinitflag = False
             # self.wechat_client.close_when_done()
             return True
@@ -844,7 +843,7 @@ class WXBot(object):
         continue_flag = 1
         wx_id_list = []
         while continue_flag != 0:
-            payLoadJson = json.dumps({"CurrentWxcontactSeq":cur_wx_seq,
+            payLoadJson = json.dumps({"CurrentWxcontactSeq": cur_wx_seq,
                                       "CurrentChatRoomContactSeq": cur_chatroom_seq})
             init_contact_req = WechatMsg(
                 token=CONST_PROTOCOL_DICT['machine_code'],
@@ -878,7 +877,7 @@ class WXBot(object):
         for i in range(0, len(wx_id_list), 20):
             end = min(20, len(wx_id_list) - i)
             # print i, i+end-1
-            self.get_contact(v_user, wx_id_list[i:i+end])
+            self.get_contact(v_user, wx_id_list[i:i + end])
         logger.info("%s: 获取联系人完成！" % v_user.userame)
         return True
 
@@ -896,7 +895,7 @@ class WXBot(object):
         if bot_param:
             self.long_host = bot_param.long_host
             self.wechat_client = WechatClient.WechatClient(self.long_host, 80, True)
-        payLoadJson = "{\"ToUserName\":\"" + user_name + "\",\"Content\":\"" + content + "\",\"Type\":0,\"MsgSource\":\"" + at_user_id +"\"}"
+        payLoadJson = "{\"ToUserName\":\"" + user_name + "\",\"Content\":\"" + content + "\",\"Type\":0,\"MsgSource\":\"" + at_user_id + "\"}"
         send_text_req = WechatMsg(
             token=CONST_PROTOCOL_DICT['machine_code'],
             version=CONST_PROTOCOL_DICT['version'],
@@ -965,7 +964,7 @@ class WXBot(object):
             'EndFlag': 1,
             'VoiceLength': 1000,
             'Data': base64.b64encode(data),
-            'VoiceFormat': 4 #4是silk
+            'VoiceFormat': 4  # 4是silk
         }
         payload_json = json.dumps(payload)
         # payload_json = requests.post(url='http://192.168.0.173:9999/get-json',data={"to_user_name":to_user_name, "file_path":'ttt.amr'}).content
@@ -993,7 +992,6 @@ class WXBot(object):
             self.wechat_client.close_when_done()
             return
 
-
         if ord(buffers[16]) != 191:
             logger.info("%s: 微信返回错误" % v_user.nickname)
 
@@ -1017,7 +1015,7 @@ class WXBot(object):
 
         try:
             data = urllib2.urlopen(url).read()
-        except:
+        except BaseException:
             self.wechat_client.close_when_done()
 
         import random
@@ -1101,7 +1099,7 @@ class WXBot(object):
             # else:
             # 传入func_name供回调
             func_name = sys._getframe().f_code.co_name
-            self.wechat_client.asyn_send(grpc_buffers, {"nickname": v_user.nickname, "send_num": send_num, 'func':func_name})
+            self.wechat_client.asyn_send(grpc_buffers, {"nickname": v_user.nickname, "send_num": send_num, 'func': func_name})
             logger.info(
                 '{0} 向 {1} 发送图片, 第 {3} 次, 共 {2} 次.'.format(v_user.nickname, user_name, total_send_nums, send_num))
             #====================
@@ -1167,7 +1165,7 @@ class WXBot(object):
             try:
                 user_chatroom = Wxuser_Chatroom.objects.get(chatroom=chatroom, wxuser=wx_user)
                 Wxuser_Chatroom.delete(user_chatroom)
-            except:
+            except BaseException:
                 pass
             return
 
@@ -1284,12 +1282,8 @@ class WXBot(object):
             logger.info("%s: buffers为空" % from_user.nickname)
             return False
 
-        # while not buffers:
-        #     buffers = self.wechat_client.get_packaget_by_seq(seq)
-
         if ord(buffers[16]) != 191:
             logger.info("%s: 微信返回错误" % from_user.nickname)
-            # self.wechat_client.close_when_done()
             return False
 
         else:
@@ -1335,9 +1329,6 @@ class WXBot(object):
             logger.info("%s: buffers为空" % v_user.nickname)
             return False
 
-        # while not buffers:
-        #     buffers = self.wechat_client.get_packaget_by_seq(seq)
-
         if ord(buffers[16]) != 191:
             logger.info("%s: 微信返回错误" % v_user.nickname)
             self.wechat_client.close_when_done()
@@ -1350,51 +1341,53 @@ class WXBot(object):
         json_buffers = json.loads(buffers.encode('utf-8'))
         wx_user = WxUser.objects.get(username=v_user.userame)
         for contact_data in json_buffers:
-            if '@chatroom' in contact_data['UserName']:
-                #
-                chatroom, created = ChatRoom.objects.get_or_create(username=contact_data['UserName'])
-                chatroom.update_from_msg_dict(contact_data)
-                chatroom.save()
-                # print "更新群", contact_data['NickName']
+            try:
+                if '@chatroom' in contact_data['UserName']:
+                    chatroom, created = ChatRoom.objects.get_or_create(username=contact_data['UserName'])
+                    chatroom.update_from_msg_dict(contact_data)
+                    chatroom.save()
+                    # print "更新群", contact_data['NickName']
 
-                Wxuser_Chatroom.objects.get_or_create(chatroom=chatroom, wxuser=wx_user)
+                    Wxuser_Chatroom.objects.get_or_create(chatroom=chatroom, wxuser=wx_user)
 
-                chatroom_members_details = self.get_chatroom_detail(v_user, contact_data['UserName'])
-                if not chatroom_members_details:
-                    try:
-                        user_chatroom = Wxuser_Chatroom.objects.get(chatroom=chatroom, wxuser=wx_user)
-                        Wxuser_Chatroom.delete(user_chatroom)
-                    except:
-                        pass
-                    return
+                    chatroom_members_details = self.get_chatroom_detail(v_user, contact_data['UserName'])
+                    if not chatroom_members_details:
+                        try:
+                            user_chatroom = Wxuser_Chatroom.objects.get(chatroom=chatroom, wxuser=wx_user)
+                            Wxuser_Chatroom.delete(user_chatroom)
+                        except BaseException:
+                            pass
+                        return
 
-                for members_dict in chatroom_members_details:
-                    chatroom_member, created = ChatroomMember.objects.get_or_create(username=members_dict["Username"])
-                    chatroom_member.update_from_members_dict(members_dict)
-                    chatroom_member.save()
+                    for members_dict in chatroom_members_details:
+                        chatroom_member, created = ChatroomMember.objects.get_or_create(username=members_dict["Username"])
+                        chatroom_member.update_from_members_dict(members_dict)
+                        chatroom_member.save()
 
-                    chatroom_member.chatroom.add(chatroom.id)
-                    chatroom_member.save()
+                        chatroom_member.chatroom.add(chatroom.id)
+                        chatroom_member.save()
 
-            else:
-                if not contact_data.get('Ticket', 1):
-                    contact, created = Contact.objects.get_or_create(username=contact_data['UserName'])
-                    contact.update_from_mydict(contact_data)
-                    contact.save()
-
-                    contact.wx_user.add(wx_user.id)
-                    contact.save()
-                    # print "更新", contact_data['NickName']
                 else:
-                    # 可能用户开启了好友验证，可以将该用户删除
-                    stranger = Contact.objects.filter(username=contact_data['UserName']).first()
-                    if stranger:
-                        # 删除好友关系
-                        wx_user.contact_set.remove(stranger)
-                        stranger.delete()
-                    #     print "删除", contact_data['NickName']
-                    # print "ticket not 0!", contact_data['NickName']
-                    pass
+                    if not contact_data.get('Ticket', 1):
+                        contact, created = Contact.objects.get_or_create(username=contact_data['UserName'])
+                        contact.update_from_mydict(contact_data)
+                        contact.save()
+
+                        contact.wx_user.add(wx_user.id)
+                        contact.save()
+                        # print "更新", contact_data['NickName']
+                    else:
+                        # 可能用户开启了好友验证，可以将该用户删除
+                        stranger = Contact.objects.filter(username=contact_data['UserName']).first()
+                        if stranger:
+                            # 删除好友关系
+                            wx_user.contact_set.remove(stranger)
+                            stranger.delete()
+                        #     print "删除", contact_data['NickName']
+                        # print "ticket not 0!", contact_data['NickName']
+                        pass
+            except Exception as e:
+                logger.error(e)
         logger.info('%s 获取联系人成功' % v_user.nickname)
         return True
 
@@ -1630,7 +1623,6 @@ class WXBot(object):
         print buffers
         return True
 
-
     def check_and_confirm_and_load(self, qrcode_rsp, device_id, md_username, platform_id):
         qr_code = self.check_qrcode_login(qrcode_rsp, device_id, md_username)
         starttime = datetime.datetime.now()
@@ -1649,6 +1641,12 @@ class WXBot(object):
                             time.sleep(3)
 
                         heart_status = red.get('v_user_heart_' + str(qr_code['Username']))
+                        """
+                        heart_status: 0  用户下线
+                                      1  用户在线
+                                      2  用户心跳终止等待重启
+                                      3  用户心跳终止不等待重启
+                        """
                         if heart_status:
                             if int(heart_status) is not 1:
                                 red.set('v_user_heart_' + str(qr_code['Username']), 0)
@@ -1694,8 +1692,6 @@ class WXBot(object):
                         HeartBeatManager.begin_heartbeat(v_user.userame, md_username)
                     return True
 
-
-
     # 向生成的新地址发送空post请求，会有adapters错误，暂时忽略
     def confirm_chatroom_invitation(self, v_user, data):
         buffers = self.GetA8Key(v_user, data)
@@ -1704,7 +1700,7 @@ class WXBot(object):
             try:
                 # 替换url中的unicode字符
                 url = buffers.split('\"')[3].replace('\\u0026', '&')
-            except:
+            except BaseException:
                 return
 
             if url:
@@ -1712,7 +1708,7 @@ class WXBot(object):
                 try:
                     # self.inviting = True
                     requests.post(url)
-                except:
+                except BaseException:
                     pass
                 # time.sleep(2)
                 logger.info("%s: 邀请进群成功！" % v_user.nickname)
@@ -1783,7 +1779,7 @@ class WXBot(object):
                 cmd=168,
                 user=v_user,
                 payloads=payloadJson.encode('utf-8'),
-        ))
+                ))
         getwxqrcode_rep = grpc_client.send(getwxqrcode_req)
         (grpc_buffers, seq) = grpc_utils.get_seq_buffer(getwxqrcode_rep)
 
@@ -1820,7 +1816,6 @@ class WXBot(object):
         self.wechat_client.close_when_done()
         return oss_path
 
-
     def download_voice(self, v_user, data):
         data = {'msgid': 1646033292, 'length': 23682, 'clientmsgid': '49d78b71ea4377121494e8adcccd8e05wxid_3drnq3ee20fg2268_1511944205'}
         bot_param = BotParam.objects.filter(username=v_user.userame).first()
@@ -1831,9 +1826,9 @@ class WXBot(object):
         startpos, blocklen, datalength = 0, 15536, int(data['length'])
 
         while startpos != datalength:
-            count = blocklen if datalength-startpos > blocklen else datalength-startpos
+            count = blocklen if datalength - startpos > blocklen else datalength - startpos
             payloadJson = json.dumps({'MsgId': data['msgid'], 'StartPos': startpos,\
-                                  'Datalen': count, 'ClientMsgId': data['clientmsgid']})
+                                      'Datalen': count, 'ClientMsgId': data['clientmsgid']})
             voiceReq = WechatMsg(
                 token=CONST_PROTOCOL_DICT['machine_code'],
                 version=CONST_PROTOCOL_DICT['version'],
@@ -1843,7 +1838,7 @@ class WXBot(object):
                     cmd=128,
                     user=v_user,
                     payloads=payloadJson.encode('utf-8'),
-            ))
+                    ))
             import binascii
             print binascii.b2a_hex(v_user.sessionKey)
             voiceRsp = grpc_client.send(voiceReq)
@@ -1870,12 +1865,13 @@ class WXBot(object):
             voicedata += voiceRsp.baseMsg.payloads
             startpos += len(voicedata)
 
-        with open('%s-voice.silk'%v_user.userame, 'wb') as f:
+        with open('%s-voice.silk' % v_user.userame, 'wb') as f:
             f.write(voicedata)
 
         logging.info("%s: 语音下载完毕！" % v_user.nickname)
         self.wechat_client.close_when_done()
         return True
+
 
 if __name__ == "__main__":
 
@@ -1920,7 +1916,7 @@ if __name__ == "__main__":
             elif cmd == 2:
                 v_user_pickle = red.get('v_user_' + wx_user)
                 v_user = pickle.loads(v_user_pickle)
-                #给谁发，谁发的，图片url
+                # 给谁发，谁发的，图片url
                 wx_bot.send_img_msg('wxid_9zoigugzqipj21', v_user,
                                     "http://md-oss.di25.cn/7730f412-d4e3-11e7-b4a3-1c1b0d3e23eb.jpeg")
 
@@ -1962,7 +1958,6 @@ if __name__ == "__main__":
             elif cmd == 10:
                 v_user = pickle.loads(red.get('v_user_' + wx_user))
                 wx_bot.send_voice_msg(v_user, '6610815091@chatroom')
-
 
         except Exception as e:
             logger.error(e)

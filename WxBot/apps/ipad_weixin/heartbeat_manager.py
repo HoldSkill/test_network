@@ -46,7 +46,7 @@ class HeartBeatManager(object):
         # print "heartbeat start working..."
 
     def __start_thread_pool(self):
-        online_user_list = WxUser.objects.filter(login__gt = 0).all()
+        online_user_list = WxUser.objects.filter(login__gt=0).all()
         print([user.username for user in online_user_list])
         for user in online_user_list:
             HeartBeatManager.begin_heartbeat(user.username)
@@ -59,16 +59,15 @@ class HeartBeatManager(object):
     def heartbeat(cls, wx_username, md_username):
         is_first = True
         wx_bot = weixin_bot.WXBot()
-
         wx_bot.set_user_context(wx_username)
 
         # 微信有新消息就会往socket推20字节的notify包
         # 防止该socket断开，每30秒发一次同步消息包
         heart_beat_count = 0
-        while True:
-            try:
-                user = WxUser.objects.filter(username=wx_username).first()
-                if user is not None:
+        user = WxUser.objects.filter(username=wx_username).first()
+        if user is not None:
+            while True:
+                try:
                     # 用户退出登陆,退出线程
                     if user.login == 0 and wx_bot._auto_retry == 30:
                         logger.info("{}: 用户重启心跳失败,结束心跳".format(user.nickname))
@@ -88,17 +87,20 @@ class HeartBeatManager(object):
                             oss_utils.beary_chat("{}: 心跳终止成功".format(user.nickname))
                             wx_bot.wechat_client.close_when_done()
                             red.set('v_user_heart_' + wx_username, 0)
+                            return
 
+                        # 如果有多个心跳的时候，只能逐一终止，不能使用logout，否则会使用户变成僵尸用户
+                        if int(heart_status) == 3:
+                            wx_bot.wechat_client.close_when_done()
+                            del HeartBeatManager.heartbeat_thread_dict[wx_username]
+                            logger.info("{}: 心跳终止成功".format(user.nickname))
+                            oss_utils.beary_chat("{}: 心跳终止成功".format(user.nickname))
+                            red.set('v_user_heart_' + wx_username, 1)
                             return
 
                     if not wx_bot.wechat_client.connected:
                         # 测试过后发现好像没有哪个包能阻止socket断开，断开只是时间问题
                         # 检测一下socket有没断开，如果断开，重新起一个socket即可
-                        # oss_utils.beary_chat("{} heart_beat socket 断开, 准备重新链接".format(wx_username), user='fatphone777')
-                        # cls.__print_log("{0} socket state:{1}".format(wx_username, wx_bot.wechat_client.connected))
-                        # oss_utils.beary_chat("淘宝客{0}: socket断开，尝试进行二次登录".format(user.nickname))
-                        # logger.info("{0}: socket断开，尝试重新进行二次登录".format(user.nickname))
-                        # wx_bot.wechat_client.close_when_done()
                         time.sleep(5)
                         # 再一次初始化
                         is_first = True
@@ -106,8 +108,6 @@ class HeartBeatManager(object):
                         wx_bot = weixin_bot.WXBot()
                         wx_bot._auto_retry = temp
                         wx_bot.set_user_context(wx_username)
-                        # wx_bot.open_notify_callback()
-
 
                     v_user = pickle.loads(red.get('v_user_' + wx_username))
 
@@ -118,18 +118,17 @@ class HeartBeatManager(object):
                         res_auto = wx_bot.auto_auth(v_user, UUid, DeviceType, False)
                         is_first = False
                         if res_auto is True:
-                            if  wx_bot.set_user_login(wx_username):
+                            if wx_bot.set_user_login(wx_username):
                                 wx_bot.open_notify_callback()
                                 v_user = pickle.loads(red.get('v_user_' + wx_username))
-                                # contact_bot = weixin_bot.WXBot()
                                 t = threading.Thread(target=wx_bot.contact_init, args=(v_user, 0, 0))
                                 t.start()
                                 red.set('v_user_heart_' + wx_username, 1)
-                                user = WxUser.objects.filter(username=wx_username).first()
                                 logger.info("{}: 心跳二次登录成功".format(user.nickname))
+                                user = WxUser.objects.filter(username=wx_username).first()
                                 oss_utils.beary_chat("{0}: 机器人已上线, 心跳开启成功--{1}, {2}, login为{3}".format(user.nickname,
-                                                                                            time.asctime(time.localtime(time.time())),
-                                                                                            user.username, user.login))
+                                                                                                       time.asctime(time.localtime(time.time())),
+                                                                                                       user.username, user.login))
                             else:
                                 logger.info("{}: 用户设置login失败" % user.nickname)
                                 return
@@ -154,15 +153,12 @@ class HeartBeatManager(object):
                             wx_bot.logout_bot(v_user)
                             return
 
-
-
                     # c# demo 中的heart_beat包，能延长socket的持续时间
                     # 但始终会断开
                     if wx_bot._lock.acquire():
                         logger.info("%s: 开始发送心跳包" % user.nickname)
                         start_time = datetime.datetime.now()
                         if wx_bot.heart_beat(v_user):
-                            # print "success"
                             logger.info("%s: 心跳包发送成功" % user.nickname)
                             heart_beat_count += 1
 
@@ -170,18 +166,18 @@ class HeartBeatManager(object):
                                 user.last_heart_beat = timezone.now()
                                 user.save()
                         else:
-                            # print "fail"
                             logger.info("%s: 心跳包发送失败" % user.nickname)
                         # 如果心跳超过10分钟才发送完毕，认定socket阻塞了，重启心跳
-                        if (datetime.datetime.now() - start_time).seconds > 10*60:
+                        if (datetime.datetime.now() - start_time).seconds > 10 * 60:
                             wx_bot.wechat_client.close_when_done()
                             logger.info("%s: 心跳完成发送超时，尝试重启心跳" % user.nickname)
 
                         wx_bot._lock.release()
-                    # print "{} heart best finished".format(wx_username)
                     time.sleep(30)
-            except Exception as e:
-                logger.error(e)
-                logger.info("[{0}]heartbeat exception:{1}".format(wx_username, e.message))
-                continue
 
+                except Exception as e:
+                    logger.error(e)
+                    logger.info("[{0}]heartbeat exception:{1}".format(wx_username, e.message))
+                    continue
+        else:
+            logger.info("%s: user不存在", wx_username)
