@@ -171,7 +171,7 @@ class ResetSingleHeartBeat(View):
                     red.set('v_user_heart_' + username, 2)
                     logger.info("%s: 准备终止用户心跳，请等待..." % username)
                     oss_utils.beary_chat("%s: 准备终止用户心跳，请等待..." % username)
-                    while int(red.get('v_user_heart_' + username)) != 0 and cnt <= 30:
+                    while int(red.get('v_user_heart_' + username)) != 0 and cnt <= 32:
                         cnt += 1
                         time.sleep(1)
             red.set('v_user_heart_' + username, 0)
@@ -216,6 +216,23 @@ class AddSuperUser(View):
         else:
             return HttpResponse(json.dumps({"ret": u"add superuser failed"}))
 
+
+class StopHeartBeat(View):
+    """
+    当且仅当用户有多个心跳时，采用此种方法
+    """
+    def get(self, request):
+        username = request.GET.get('wx_id', "")
+        if not username:
+            return HttpResponse(json.dumps({"ret": 0, "reason": "wx_id不能为空"}))
+        v_user_pickle = red.get('v_user_' + username)
+        v_user = pickle.loads(v_user_pickle)
+        if v_user:
+            # wx_bot = WXBot()
+            # wx_bot.logout_bot(v_user)
+            red.set('v_user_heart_' + username, 3)
+            logger.info("%s: 强制终止用户心跳，请等待..." % username)
+        return HttpResponse(json.dumps({"ret": 1}))
 
 
 
