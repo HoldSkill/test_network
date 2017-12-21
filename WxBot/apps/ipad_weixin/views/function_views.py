@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 
 import json
+import time
 import datetime
 from django.http import HttpResponse
 from django.views.generic.base import View
@@ -235,6 +236,8 @@ class SendGroupMessageVIew(View):
                 wx_id = wxuser.username
                 chatroom_id = chatroom.username
                 thread.start_new_thread(sendMsg, (wx_id, chatroom_id, data))
+                # TODO: 这里必须延时至少1s，所有的线程才会启动并且执行相应的代码
+                time.sleep(1)
 
         return HttpResponse(json.dumps({"ret": 1, "data": "处理完成"}))
 
