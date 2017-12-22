@@ -24,7 +24,7 @@ def sendMsg(wx_id, chatroom_id, data, at_user_id=''):
             if item.startswith("http"):
                 result = wx_bot.send_img_msg(chatroom_id, v_user, item)
                 if not result:
-                    break
+                    continue
             elif item.startswith("<appmsg"):
                 wx_bot.send_app_msg(v_user, chatroom_id, item)
             else:

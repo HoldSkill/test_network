@@ -11,13 +11,20 @@ from django.views.decorators.csrf import csrf_exempt
 from ipad_weixin.send_msg_type import sendMsg
 from ipad_weixin.models import WxUser, ChatRoom
 
+import logging
+logger = logging.getLogger('django_views')
+
 
 
 wx_id = "wxid_cegmcl4xhn5w22"
-chatroom_id = "6610815091@chatroom"
-data = ["http://md-oss.di25.cn/288ed4e4-e179-11e7-b4f6-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,q_65",
-        "http://md-oss.di25.cn/288ed4e4-e179-11e7-b4f6-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,q_65",
-        "http://md-oss.di25.cn/288ed4e4-e179-11e7-b4f6-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,q_65"]
+chatroom_id = "5179059705@chatroom"
+data = ["http://md-oss.di25.cn/03a7d2d6-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d7-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d8-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d9-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2da-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "这个药真的是太好用了，我在家里撒上药两天屋里的蟑螂死了一片，现在基本都没有蟑螂了，我真的不是托儿，确实好用。"
+        ]
 
 
 class TestSendGroupMsgView(View):
@@ -26,12 +33,12 @@ class TestSendGroupMsgView(View):
         req_dict = json.loads(request.body)
         data = req_dict["data"]
         for i in range(1, 100):
+            logger.warning("开启第{}个线程".format(i))
+            data[0] = data[0]
             t = threading.Thread(target=sendMsg, args=(wx_id, chatroom_id, data))
             t.start()
-            # t = threading.Thread(target=test_process, args=(i,))
-            # t.start()
-            # thread.start_new_thread(sendMsg, (wx_id, chatroom_id, data))
-
+            # TODO：主线程需要阻塞，全部的线程才会开始发送，不然只会有少量的线程运行，其余线程在启动后就不知道去哪儿了
+            time.sleep(1)
         return HttpResponse(json.dumps({"ret": 1}))
 
 

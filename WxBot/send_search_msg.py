@@ -15,7 +15,7 @@ local_host = "http://127.0.0.1:10024/"
 
 url = server_host + "api/robot/platform_user_list?platform_id=make_money_together"
 send_msg_url = server_host + "api/robot/send_msg/"
-text = "Hello，告诉大家一个很神奇的事情，在群里直接发送“找XXX（例如：找手机）”或直接在群里发送淘口令，我就会发给你所有你想要的优惠券噢～"
+text = "Hello，告诉大家一个很神奇的事情，在群里直接发送“找XXX（例如：找手机）”，我就会给你所有你想要的优惠券噢～"
 
 # TODO: 需要写一个crontab粗来
 def main():
