@@ -33,40 +33,51 @@ class WechatClientTest(asynchat.async_chat, object):
         self.__rec_package = fifo()
         self.__lock = threading.Lock()
 
-        # set end point address
-        self.endpoint_host = end_point_host
-        self.endpoint_port = end_point_port
+        # # set end point address
+        # self.endpoint_host = end_point_host
+        # self.endpoint_port = end_point_port
 
         # set receive data buffer size
         self.ac_in_buffer_size = 81920
         self.set_terminator(None)
-        self.asyn_rec_thread = threading.Thread(target=self.__asyn_rec)
-        self.asyn_rec_thread.setDaemon(True)
-        self.asyn_rec_thread.start()
-        self.asyn_rec_thread = threading.Thread(target=self.__check_timeout)
-        self.asyn_rec_thread.setDaemon(True)
-        self.asyn_rec_thread.start()
-        self.asyn_rec_thread = threading.Thread(target=self.__asyn_fetch)
-        self.asyn_rec_thread.setDaemon(True)
-        self.asyn_rec_thread.start()
+        _monitor_methods_to_be_started = [self.__asyn_rec, self.__check_timeout, self.__asyn_fetch]
+        # self.asyn_rec_thread = threading.Thread(target=self.__asyn_rec)
+        # self.asyn_rec_thread.setDaemon(True)
+        # self.asyn_rec_thread.start()
+        # self.asyn_rec_thread = threading.Thread(target=self.__check_timeout)
+        # self.asyn_rec_thread.setDaemon(True)
+        # self.asyn_rec_thread.start()
+        # self.asyn_rec_thread = threading.Thread(target=self.__asyn_fetch)
+        # self.asyn_rec_thread.setDaemon(True)
+        # self.asyn_rec_thread.start()
 
         # set socket
         _socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        errcode = _socket.connect_ex((self.endpoint_host, self.endpoint_port))
+        errcode = _socket.connect_ex((end_point_host, end_point_port))
         if errcode == 0:
             self.__print_log("====================******socket 连接******====================")
         else:
             self.__print_log("error_code:{0}".format(errcode))
         super(WechatClientTest, self).__init__(_socket)
-        self.be_init = 1
-        # self.connect((self.endpoint_host, self.endpoint_port))
 
-        # initial arg
-        self.buffer_output = []
-        self.rec_flag = False
-        self.rec_len = 0
-        self.total_len = 0
-        self.seq = 0
+        if not self.connected:
+            logger.error("==[Fucked up]===WechatClientModify initiating failed. ======")
+            self.close_when_done()
+        else:
+            # initial arg
+            self.buffer_output = []
+            self.rec_flag = False
+            self.rec_len = 0
+            self.total_len = 0
+            self.seq = 0
+            self.be_init = 1
+            self.sent = False
+            # start monitor methods
+            for met in _monitor_methods_to_be_started:
+                t = threading.Thread(target=met)
+                t.setDaemon(True)
+                t.start()
+
 
     def __enter__(self):
         return self
@@ -80,26 +91,25 @@ class WechatClientTest(asynchat.async_chat, object):
         while self.__sent_packge_info != {} :
             time.sleep(1)
         super(WechatClientTest, self).close_when_done()
-        # adam: 2017.12.11 asynchat 会在发送队列为空时关闭socket，所以此处不用手动关闭socket.
         if self.socket is not None:
             self.socket.close()
         self.__print_log("====================******socket 关闭！******====================")
 
-    def sync_send_and_return(self, data, time_out=1, close_socket=False):
-        self.push(data)
-        seq = common_utils.read_int(data, 12)
-        start_time = datetime.now()
-        while True:
-            buffers = self.get_packaget_by_seq(seq)
-            if buffers is not None:
-                if close_socket:
-                    self.close_when_done()
-                return buffers
-            time.sleep(time_out)
-            if (datetime.now() - start_time).seconds >= time_out*10:
-                if close_socket:
-                    self.close_when_done()
-                break
+    # def sync_send_and_return(self, data, time_out=1, close_socket=False):
+    #     self.push(data)
+    #     seq = common_utils.read_int(data, 12)
+    #     start_time = datetime.now()
+    #     while True:
+    #         buffers = self.get_packaget_by_seq(seq)
+    #         if buffers is not None:
+    #             if close_socket:
+    #                 self.close_when_done()
+    #             return buffers
+    #         time.sleep(time_out)
+    #         if (datetime.now() - start_time).seconds >= time_out*10:
+    #             if close_socket:
+    #                 self.close_when_done()
+    #             break
 
     def __asyn_rec(self):
         while True:
@@ -280,6 +290,8 @@ class WechatClientTest(asynchat.async_chat, object):
     #       time: 发送时间
     #       func: 方法名称
     def asyn_send(self, data, param_dict):
+        if not self.sent:
+            self.sent = True
         self.push(data)
         assert type(param_dict) == dict, 'param param_dict must be a dict.'
         seq = common_utils.read_int(data, 12)
@@ -287,10 +299,10 @@ class WechatClientTest(asynchat.async_chat, object):
         self.__sent_packge_info[seq]= param_dict
 
     def __check_timeout(self):
-        while self.be_init == 0:
+        while not self.sent:
             time.sleep(1)
             continue
-        while self.connected:
+        while True:
             for sent_packs in self.__sent_packge_info.keys():
                 try:
                     if datetime.now()-self.__sent_packge_info[sent_packs]['time'] > timedelta(0,10,0):
@@ -303,9 +315,10 @@ class WechatClientTest(asynchat.async_chat, object):
                 except Exception, e:
                     logger.error(str(e)+' : ' + e.message)
             time.sleep(1)
+            if not self.connected:
+                break
 
     def __asyn_fetch(self):
-        # todo: 抛弃cmd,用seq唯一标识
         while True:
             status, buffer = self.__rec_package.pop()
             if buffer:
@@ -321,4 +334,6 @@ class WechatClientTest(asynchat.async_chat, object):
                     continue
                 crud_func(data, **param_dict)
             time.sleep(0.5)
+            if not self.connected:
+                break
 

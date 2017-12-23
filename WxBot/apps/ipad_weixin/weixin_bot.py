@@ -1012,11 +1012,14 @@ class WXBot(object):
         if bot_param:
             self.long_host = bot_param.long_host
             self.wechat_client = WechatClientTest(self.long_host, 80, True)
+        if not self.wechat_client.be_init:
+            return False
 
         try:
             data = urllib2.urlopen(url).read()
         except BaseException:
             self.wechat_client.close_when_done()
+            return False
 
         import random
         random_str = str(random.randint(0, 999))
