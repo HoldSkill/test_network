@@ -145,8 +145,8 @@ class HeartBeatManager(object):
                         else:
                             red.set('v_user_heart_' + wx_username, 0)
                             del HeartBeatManager.heartbeat_thread_dict[wx_username]
-                            auth_user = User.objects.filter(username=md_username).first()
-                            user.user.remove(auth_user)
+                            # auth_user = User.objects.filter(username=md_username).first()
+                            # user.user.remove(auth_user)
                             logger.info("{}: 心跳二次登录失败，退出心跳，登录失败".format(user.nickname))
                             oss_utils.beary_chat("{}: 啊哦，机器人心跳失败，上线失败".format(user.nickname))
                             wx_bot.wechat_client.close_when_done()

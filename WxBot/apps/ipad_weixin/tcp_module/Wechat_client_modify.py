@@ -290,7 +290,7 @@ class WechatClientTest(asynchat.async_chat, object):
         while self.be_init == 0:
             time.sleep(1)
             continue
-        while self.connected:
+        while self.__sent_packge_info:
             for sent_packs in self.__sent_packge_info.keys():
                 if datetime.now()-self.__sent_packge_info[sent_packs]['time'] > timedelta(0,10,0):
                     nickname = self.__sent_packge_info[sent_packs]['nickname']

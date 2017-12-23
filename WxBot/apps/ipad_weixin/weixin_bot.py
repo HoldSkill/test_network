@@ -674,14 +674,17 @@ class WXBot(object):
                     for msg_dict in msg_list:
                         # 如果群进行改名，会进到这个循环，导致contact中存储了群的信息
                         if msg_dict['MsgType'] == 2 and '@chatroom' not in msg_dict['UserName']:
-                            contact, created = Contact.objects.get_or_create(username=msg_dict['UserName'])
-                            # print "新增", msg_dict['UserName']
-                            contact.save()
-                            if created:
-                                wx_user = WxUser.objects.get(username=v_user.userame)
-                                contact.wx_user.add(wx_user.id)
-                                contact.update_from_mydict(msg_dict)
+                            try:
+                                contact, created = Contact.objects.get_or_create(username=msg_dict['UserName'])
+                                # print "新增", msg_dict['UserName']
                                 contact.save()
+                                if created:
+                                    wx_user = WxUser.objects.get(username=v_user.userame)
+                                    contact.wx_user.add(wx_user.id)
+                                    contact.update_from_mydict(msg_dict)
+                                    contact.save()
+                            except Exception as e:
+                                logger.error(e)
                         elif msg_dict.get('Status') is not None:
                             # # 测试来自指定用户的语音， testing
                             # if msg_dict['MsgType'] == 34 and msg_dict['FromUserName'] == 'hiddensorrow':
@@ -866,8 +869,13 @@ class WXBot(object):
             init_contact_rsp.baseMsg.payloads = buffers
             init_contact_rsp = grpc_client.send(init_contact_rsp)
             contact = json.loads(init_contact_rsp.baseMsg.payloads)
-            temp = [user["Username"] for user in contact['UsernameLists']]
-            wx_id_list.extend(temp)
+
+            try:
+                temp = [user["Username"] for user in contact['UsernameLists']]
+                wx_id_list.extend(temp)
+            except BaseException:
+                pass
+
             continue_flag = contact['ContinueFlag']
             cur_wx_seq = contact['CurrentWxcontactSeq']
             cur_chatroom_seq = contact['CurrentChatRoomContactSeq']
@@ -877,7 +885,8 @@ class WXBot(object):
         for i in range(0, len(wx_id_list), 20):
             end = min(20, len(wx_id_list) - i)
             # print i, i+end-1
-            self.get_contact(v_user, wx_id_list[i:i + end])
+            if self.wechat_client.connected:
+                self.get_contact(v_user, wx_id_list[i:i + end])
         logger.info("%s: 获取联系人完成！" % v_user.userame)
         return True
 
