@@ -153,8 +153,7 @@ class CRUDHandler(object):
         if not buffers:
                 logger.info("{} : buffers为空".format(nickname))
         elif ord(buffers[16]) != 191:
-            logger.info("{}: 微信返回错误".format(nickname))
-            logger.info("{0}第{1}次图片发送失败".format(nickname, send_num))
+            logger.info("{0}: 微信返回错误, 第{1}次图片发送失败".format(nickname, send_num))
         else:
             logger.info("{0} 第 {1} 次发送图片成功！".format(nickname, send_num))
 

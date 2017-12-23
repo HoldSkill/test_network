@@ -53,11 +53,11 @@ class WechatClientTest(asynchat.async_chat, object):
 
         # set socket
         _socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        errcode = _socket.connect_ex((end_point_host, end_point_port))
-        if errcode == 0:
-            self.__print_log("====================******socket 连接******====================")
-        else:
-            self.__print_log("error_code:{0}".format(errcode))
+        # errcode = _socket.connect_ex((end_point_host, end_point_port))
+        # if errcode == 0:
+        #     self.__print_log("====================******socket 连接******====================")
+        # else:
+        #     self.__print_log("error_code:{0}".format(errcode))
         super(WechatClientTest, self).__init__(_socket)
 
         if not self.connected:
