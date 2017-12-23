@@ -77,13 +77,16 @@ class WechatClient(asynchat.async_chat, object):
             buffers = self.get_packaget_by_seq(seq)
             if buffers is not None:
                 if close_socket:
+                    logger.info("================socket closed!===========")
                     self.close_when_done()
                 return buffers
             time.sleep(time_out)
             if (datetime.now() - start_time).seconds >= time_out*10:
                 if close_socket:
+                    logger.info("================socket closed & time out!===========")
                     self.close_when_done()
                 break
+        logger.info("================time out & buffers none!===========")
 
     def __asyn_rec(self):
         while True:
