@@ -177,7 +177,8 @@ class HeartBeatManager(object):
 
                 except Exception as e:
                     logger.error(e)
-                    logger.info("[{0}]heartbeat exception:{1}".format(wx_username, e.message))
-                    continue
+                    logger.info("{0}heartbeat exception:{1}".format(wx_username, e.message))
+                    oss_utils.beary_chat("{0}heartbeat exception:{1}".format(wx_username, e.message))
+                    return
         else:
             logger.info("%s: user不存在", wx_username)
