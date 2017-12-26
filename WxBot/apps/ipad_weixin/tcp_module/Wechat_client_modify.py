@@ -29,27 +29,14 @@ class WechatClientTest(asynchat.async_chat, object):
         # 已发送包的参数暂存区
         self.__sent_packge_info ={}
         # 接受到包的缓冲区
-        # 存放格式为(cmd, seq, data)
+        # 存放格式为(seq, data)
         self.__rec_package = fifo()
         self.__lock = threading.Lock()
-
-        # # set end point address
-        # self.endpoint_host = end_point_host
-        # self.endpoint_port = end_point_port
 
         # set receive data buffer size
         self.ac_in_buffer_size = 81920
         self.set_terminator(None)
         _monitor_methods_to_be_started = [self.__asyn_rec, self.__check_timeout, self.__asyn_fetch]
-        # self.asyn_rec_thread = threading.Thread(target=self.__asyn_rec)
-        # self.asyn_rec_thread.setDaemon(True)
-        # self.asyn_rec_thread.start()
-        # self.asyn_rec_thread = threading.Thread(target=self.__check_timeout)
-        # self.asyn_rec_thread.setDaemon(True)
-        # self.asyn_rec_thread.start()
-        # self.asyn_rec_thread = threading.Thread(target=self.__asyn_fetch)
-        # self.asyn_rec_thread.setDaemon(True)
-        # self.asyn_rec_thread.start()
 
         # set socket
         _socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -78,7 +65,6 @@ class WechatClientTest(asynchat.async_chat, object):
                 t.setDaemon(True)
                 t.start()
 
-
     def __enter__(self):
         return self
 
@@ -86,31 +72,41 @@ class WechatClientTest(asynchat.async_chat, object):
         self.close_when_done()
         return
 
-    def close_when_done(self):
-        # 发送确认区为空时从容关闭socket。
-        while self.__sent_packge_info != {} :
-            time.sleep(1)
-        super(WechatClientTest, self).close_when_done()
-        if self.socket is not None:
-            self.socket.close()
-        self.__print_log("====================******socket 关闭！******====================")
 
-    # def sync_send_and_return(self, data, time_out=1, close_socket=False):
-    #     self.push(data)
-    #     seq = common_utils.read_int(data, 12)
-    #     start_time = datetime.now()
-    #     while True:
-    #         buffers = self.get_packaget_by_seq(seq)
-    #         if buffers is not None:
-    #             if close_socket:
-    #                 self.close_when_done()
-    #             return buffers
-    #         time.sleep(time_out)
-    #         if (datetime.now() - start_time).seconds >= time_out*10:
-    #             if close_socket:
-    #                 self.close_when_done()
-    #             break
+    """同步通信  以下两个方法"""
+    def sync_send_and_return(self, data, time_out=1, close_socket=False):
+        self.push(data)
+        seq = common_utils.read_int(data, 12)
+        start_time = datetime.now()
+        while True:
+            buffers = self.get_packaget_by_seq(seq)
+            if buffers is not None:
+                if close_socket:
+                    self.close_when_done()
+                return buffers
+            time.sleep(time_out)
+            if (datetime.now() - start_time).seconds >= time_out*10:
+                if close_socket:
+                    self.close_when_done()
+                break
 
+    def get_packaget_by_seq(self, seq):
+        # self.__rec_package是由元组组成的fifo
+        # self.__rec_package.list 是由元组组成的deque(), 不支持pop(key), 只有remove(value)
+        # 2017.12.26 因为数据结构变了，所以这里会比较麻烦，功能正常。
+        if self.__lock.acquire():
+            __rec_list = self.__rec_package.list
+            __seq_list = [x[0] for x in __rec_list]
+            if seq in __seq_list:
+                _buf = __rec_list[__seq_list.index(seq)][1]
+                __rec_list.remove((seq, _buf))
+                self.__lock.release()
+                return _buf
+            self.__lock.release()
+            return None
+
+
+    """ Monitor method  以下三个方法"""
     def __asyn_rec(self):
         while True:
             try:
@@ -122,6 +118,47 @@ class WechatClientTest(asynchat.async_chat, object):
             except Exception as e:
                 print(e)
 
+    def __check_timeout(self):
+        while not self.sent:
+            time.sleep(1)
+            continue
+        while True:
+            for sent_packs in self.__sent_packge_info.keys():
+                try:
+                    if datetime.now()-self.__sent_packge_info[sent_packs]['time'] > timedelta(0,10,0):
+                        nickname = self.__sent_packge_info[sent_packs]['nickname']
+                        method_name = self.__sent_packge_info[sent_packs]['func']
+                        logger.warning(" {0} 执行 {1} 请求超时".format(nickname, method_name))
+                        self.__sent_packge_info.pop(sent_packs)
+                except KeyError:
+                    pass
+                except Exception, e:
+                    logger.error(str(e)+' : ' + e.message)
+            time.sleep(1)
+            if not self.connected:
+                break
+
+    def __asyn_fetch(self):
+        while True:
+            status, buffer = self.__rec_package.pop()
+            if buffer:
+                seq, data = buffer
+                if seq not in self.__sent_packge_info.keys():
+                    logger.warning("Received package without SentInfo:  seq {}".format(seq))
+                    continue
+                param_dict = self.__sent_packge_info.pop(seq)
+                func_name = param_dict['func']
+                crud_func = getattr(CRUDHandler, func_name, None)
+                if not crud_func:
+                    logger.warning("Unknown Package: {}.".format(seq))
+                    continue
+                crud_func(data, **param_dict)
+            time.sleep(0.5)
+            if not self.connected:
+                break
+
+
+    """接收消息"""
     def collect_incoming_data(self, data):
         if self.connected is False:
             logger.info("连接已断开...")
@@ -226,6 +263,8 @@ class WechatClientTest(asynchat.async_chat, object):
                     self.__print_log("total_len {} should >= rec_len {}".format(self.total_len, self.rec_len))
                     return
 
+
+    """回调处理  以下三个方法"""
     def __process_notify_package(self, data):
         # 处理不同cmd的包
         cmd = common_utils.read_int(data, 8)
@@ -237,27 +276,6 @@ class WechatClientTest(asynchat.async_chat, object):
             self.__notify(data)
         if cmd != 24 and cmd != 318:
             self.__print_log("未知包CMD:{0} selector:{1} 过滤:{2}".format(cmd, selector, len(data)))
-
-    '''用不着咯
-        get_packaget_by_seq'''
-    # def get_packaget_by_seq(self, seq):
-    #     if self.__lock.acquire():
-    #         if seq in self.__rec_package.keys():
-    #             _buf = self.__rec_package[seq]
-    #             self.__rec_package.pop(seq)
-    #             self.__lock.release()
-    #             return _buf
-    #         self.__lock.release()
-    #         return None
-
-    def push(self, data):
-        self.ac_out_buffer_size = len(data)
-        super(WechatClientTest, self).push(data)
-        self.__print_log("push data length: " + str(len(data)))
-
-    # found_terminator() must to override
-    def found_terminator(self):
-        pass
 
     def __notify(self, data):
         for func in self.__notify_list:
@@ -272,24 +290,20 @@ class WechatClientTest(asynchat.async_chat, object):
     def register_notify(self, func):
         self.__notify_list.append(func)
 
-    def __print_log(self, msg):
-        if self.is_print_log is True:
-            logger.info(msg)
 
-    @staticmethod
-    def check_buffer_16_is_191(buffers):
-        if buffers is None or ord(buffers[16]) is not 191:
-            return False
-        else:
-            return True
+    """发送消息"""
+    def push(self, data):
+        self.ac_out_buffer_size = len(data)
+        super(WechatClientTest, self).push(data)
+        self.__print_log("push data length: " + str(len(data)))
 
-    # 调用asynchat.push()，并按照数据长度设定self.ac_out_buffer_size，以确保数据完整推出。
-    # 推出数据的同时，赋予推送时间，并将参数字典传入
-    #   param_dict中至少有3对键值，即：
-    #       nickname: 微信昵称, 用以定位用户
-    #       time: 发送时间
-    #       func: 方法名称
     def asyn_send(self, data, param_dict):
+        # 调用asynchat.push()，并按照数据长度设定self.ac_out_buffer_size，以确保数据完整推出。
+        # 推出数据的同时，赋予推送时间，并将参数字典传入
+        #   param_dict中至少有3对键值，即：
+        #       nickname: 微信昵称, 用以定位用户
+        #       time: 发送时间
+        #       func: 方法名称
         if not self.sent:
             self.sent = True
         self.push(data)
@@ -298,42 +312,29 @@ class WechatClientTest(asynchat.async_chat, object):
         param_dict['time'] = datetime.now()
         self.__sent_packge_info[seq]= param_dict
 
-    def __check_timeout(self):
-        while not self.sent:
-            time.sleep(1)
-            continue
-        while True:
-            for sent_packs in self.__sent_packge_info.keys():
-                try:
-                    if datetime.now()-self.__sent_packge_info[sent_packs]['time'] > timedelta(0,10,0):
-                        nickname = self.__sent_packge_info[sent_packs]['nickname']
-                        method_name = self.__sent_packge_info[sent_packs]['func']
-                        logger.warning(" {0} 执行 {1} 请求超时".format(nickname, method_name))
-                        self.__sent_packge_info.pop(sent_packs)
-                except KeyError:
-                    pass
-                except Exception, e:
-                    logger.error(str(e)+' : ' + e.message)
-            time.sleep(1)
-            if not self.connected:
-                break
 
-    def __asyn_fetch(self):
-        while True:
-            status, buffer = self.__rec_package.pop()
-            if buffer:
-                seq, data = buffer
-                if seq not in self.__sent_packge_info.keys():
-                    logger.warning("Received package without SentInfo:  seq {}".format(seq))
-                    continue
-                param_dict = self.__sent_packge_info.pop(seq)
-                func_name = param_dict['func']
-                crud_func = getattr(CRUDHandler, func_name, None)
-                if not crud_func:
-                    logger.warning("Unknown Package: {}.".format(seq))
-                    continue
-                crud_func(data, **param_dict)
-            time.sleep(0.5)
-            if not self.connected:
-                break
+    """asynchat约定必须重载的方法"""
+    def found_terminator(self):
+        pass
 
+
+    def __print_log(self, msg):
+        if self.is_print_log is True:
+            logger.info(msg)
+
+    def close_when_done(self):
+        # 发送确认区为空时从容关闭socket。
+        while self.__sent_packge_info != {} :
+            time.sleep(1)
+        super(WechatClientTest, self).close_when_done()
+        if self.socket is not None:
+            self.socket.close()
+        self.__print_log("====================******socket 关闭！******====================")
+
+
+    @staticmethod
+    def check_buffer_16_is_191(buffers):
+        if buffers is None or ord(buffers[16]) is not 191:
+            return False
+        else:
+            return True

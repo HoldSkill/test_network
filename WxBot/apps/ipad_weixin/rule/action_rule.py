@@ -9,7 +9,7 @@ from django.utils.encoding import iri_to_uri
 
 from ipad_weixin.models import Qrcode, ChatRoom, ChatroomMember, WxUser, PlatformInformation
 from django.contrib.auth.models import User
-
+from django.db import connection
 import urllib
 import requests
 import json
@@ -79,6 +79,7 @@ def filter_keyword_rule(nickname, wx_id, msg_dict):
                 logger.error("WxUser: {0}, 群: {1}, 商品搜索出现异常".format(nickname, chatroom.nickname))
         else:
             logger.info("WxUser: {0}搜索群为空".format(nickname))
+    connection.close()
 
 
 def find_buy_start(s):
