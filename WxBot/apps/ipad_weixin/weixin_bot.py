@@ -736,12 +736,14 @@ class WXBot(object):
                                                 self.send_invited_message(msg_dict, v_user)
                                 except Exception as e:
                                     logger.error(e)
+                                    connection.close()
                             try:
                                 message, created = Message.objects.get_or_create(msg_id=msg_dict['MsgId'])
                                 message.update_from_msg_dict(msg_dict)
                                 message.save()
                             except Exception as e:
                                 logger.error(e)
+                                connection.close()
                         else:
                             print(msg_dict)
                 else:
@@ -760,6 +762,7 @@ class WXBot(object):
 
             message = "@" + invited_nickname + "\\n 嘿嘿，欢迎你的加入~[机智][机智]"
             self.send_text_msg(msg_dict['FromUserName'], message, v_user, at_user_id=invited_member_id)
+            connection.close()
 
     def new_init(self, v_user, md_username, platform_id):
         """
@@ -943,9 +946,8 @@ class WXBot(object):
 
         else:
             logger.info('{0} 向 {1} 发送文字信息:成功'.format(v_user.nickname, user_name, content))
-
-        connection.close()
         self.wechat_client.close_when_done()
+        connection.close()
         # return True
 
     def send_voice_msg(self, v_user, to_user_name, data=None):
@@ -1213,6 +1215,7 @@ class WXBot(object):
         else:
             # 修改群名称
             self.get_contact(v_user, chatroom_name.encode('utf-8'))
+        connection.close()
 
     def get_chatroom_detail(self, v_user, room_id):
         """
@@ -1395,8 +1398,10 @@ class WXBot(object):
                         #     print "删除", contact_data['NickName']
                         # print "ticket not 0!", contact_data['NickName']
                         pass
+                connection.close()
             except Exception as e:
                 logger.error(e)
+                connection.close()
         logger.info('%s 获取联系人成功' % v_user.nickname)
         return True
 
