@@ -10,6 +10,7 @@ import threading
 
 from utils import oss_utils
 from models import *
+from django.db import connection
 
 import threading
 
@@ -173,9 +174,11 @@ class HeartBeatManager(object):
                             logger.info("%s: 心跳完成发送超时，尝试重启心跳" % user.nickname)
 
                         wx_bot._lock.release()
+                    connection.close()
                     time.sleep(30)
 
                 except Exception as e:
+                    connection.close()
                     logger.error(e)
                     logger.info("{0}heartbeat exception:{1}".format(wx_username, e.message))
                     oss_utils.beary_chat("{0}heartbeat exception:{1}".format(wx_username, e.message))
