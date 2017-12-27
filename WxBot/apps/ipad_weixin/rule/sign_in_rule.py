@@ -45,7 +45,7 @@ def filter_sign_in_keyword(wx_id, msg_dict):
         logger.info("WxUser: {0}, 群 {1} 进入签到".format(wx_id, chatroom.nickname))
         # 判断该群的签到规则是否为keyword
         try:
-            sign_rule_db = SignInRule.objects.get(keyword=content, chatroom=chatroom)
+            sign_rule_db = SignInRule.objects.filter(keyword=content, chatroom=chatroom).first()
 
             if sign_rule_db:
                 speaker = ChatroomMember.objects.filter(username=speaker_id).first()
@@ -59,7 +59,8 @@ def filter_sign_in_keyword(wx_id, msg_dict):
                     "speaker_id": speaker_id
                 }
 
-                url = 'http://s-poc-02.qunzhu666.com/365/api/clockin/'
+                # url = 'http://s-poc-02.qunzhu666.com/365/api/clockin/'
+                url = 'http://s-poc-02.qunzhu666.com/sign/'
                 request_url = url + sign_rule_db.red_packet_id
                 json_data = json.dumps(data)
                 response = requests.post(request_url, data=json_data)
