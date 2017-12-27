@@ -206,9 +206,9 @@ def MsgReq(cmd, **kwargs):
     elif cmd == 551:
         """get_chatroom_detail"""
         assert 'v_user' in kwargs, 'param v_user is required'
-        assert 'pay_load_json' in kwargs, 'param pay_load_json is required'
+        assert 'payLoadJson' in kwargs, 'param payLoadJson is required'
         v_user = kwargs.get('v_user')
-        pay_load_json = kwargs.get('pay_load_json')
+        payLoadJson = kwargs.get('payLoadJson')
         req = WechatMsg(
             token=CONST_PROTOCOL_DICT['machine_code'],
             version=CONST_PROTOCOL_DICT['version'],
@@ -217,7 +217,7 @@ def MsgReq(cmd, **kwargs):
             baseMsg=BaseMsg(
                 cmd=551,
                 user=v_user,
-                payloads=pay_load_json.encode('utf-8')
+                payloads=payLoadJson.encode('utf-8')
             )
         )
     elif cmd == 222:
@@ -251,7 +251,7 @@ def MsgReq(cmd, **kwargs):
             baseMsg=BaseMsg(
                 cmd=182,
                 user=v_user,
-                payloads=payLoadJson
+                payloads=payLoadJson.encode('utf-8')
             )
         )
     elif cmd == 119:

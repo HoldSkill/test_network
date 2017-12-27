@@ -5,6 +5,7 @@ import django
 os.environ.update({"DJANGO_SETTINGS_MODULE": "WxBot.settings"})
 django.setup()
 
+from django.db import connection
 from ipad_weixin.models import ChatRoom, SignInRule, ChatroomMember
 import time
 import re
@@ -82,6 +83,8 @@ def filter_sign_in_keyword(wx_id, msg_dict):
         except Exception as e:
             logger.error(e)
             logger.error("WxUser: {0}, 群 {1} 签到发生异常, 原因: {2}".format(wx_id, chatroom.nickname, e.message))
+        finally:
+            connection.close()
 
     else:
         pass

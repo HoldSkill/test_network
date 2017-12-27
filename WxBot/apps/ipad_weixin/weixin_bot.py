@@ -44,6 +44,7 @@ from ipad_weixin.utils import oss_utils
 from ipad_weixin.utils.common_utils import get_time_stamp, read_int, int_list_convert_to_byte_list, char_to_str, \
     check_buffer_16_is_191, get_public_ip, check_grpc_response, get_md5
 from ipad_weixin.utils.wechatmsg_utils import MsgReq
+from ipad_weixin.utils.crud_utils import CRUDHandler
 from ipad_weixin.rule import action_rule
 
 from django.contrib.auth.models import User as AuthUser
@@ -193,35 +194,18 @@ class WXBot(object):
         user_db.save()
         logger.info("%s: 退出机器人，当前login为%s" % (user_db.nickname, user_db.login))
 
+    """ use MsgReq & CRUD
+    GOOD"""
     def get_qrcode(self, md_username):
-        """
-        获取qrcode
-        :return:
-        """
-        # session_key = '5326451F200E0D130CE4AE27262B5897'.decode('hex')
-        # 构造qrcode请求
+        """获取qrcode"""
         self.wechat_client = WechatClient.WechatClient(self.long_host, 80, True)
+        # self.wechat_client = WechatClientTest(self.long_host, 80, True)
         self.deviceId = get_md5(md_username)
 
-        qrcode_req = WechatMsg(
-            token=CONST_PROTOCOL_DICT['machine_code'],
-            version=CONST_PROTOCOL_DICT['version'],
-            timeStamp=get_time_stamp(),
-            iP=get_public_ip(),
-            baseMsg=BaseMsg(
-                cmd=502,
-                user=User(
-                    sessionKey=int_list_convert_to_byte_list(CONST_PROTOCOL_DICT['random_encry_key']),
-                    deviceId=self.deviceId
-                ),
-                # payloads = {'ProtocolVer': 5}
+        qrcode_req = MsgReq(502, deviceId=self.deviceId)
 
-            )
-        )
         qrcode_rsp = grpc_client.send(qrcode_req)
-
         check_grpc_response(qrcode_rsp.baseMsg.ret)
-
         (grpc_buffers, seq) = grpc_utils.get_seq_buffer(qrcode_rsp)
 
         if not grpc_buffers:
@@ -240,17 +224,6 @@ class WXBot(object):
         imgData = base64.b64decode(qr_code['ImgBuf'])
         uuid = qr_code['Uuid']
 
-        try:
-            Qrcode.save_qr_code(qr_code, md_username)
-
-        except Exception as e:
-            self.wechat_client.close_when_done()
-            logger.error(e)
-
-        # if not Qrcode.save_qr_code(qr_code):
-        #     self.wechat_client.close_when_done()
-        #     return
-
         # 地址规则
         # http://md-bot-service.oss-cn-shenzhen.aliyuncs.com/wxpad/uuid.png
         # http://md-bot-service.oss-cn-shenzhen.aliyuncs.com/wxpad/Q6l7utrwLk2SQWl0WRwJ.png
@@ -258,14 +231,14 @@ class WXBot(object):
         try:
             oss_path = oss_utils.put_object_to_oss("wxpad/" + uuid + ".png", imgData)
             logger.info("oss_path is: {}".format(oss_path))
-            # print("oss_path is: {}".format(oss_path))
+            return oss_path, qrcode_rsp, self.deviceId, uuid
         except Exception as e:
             logger.error(e)
-            # print('upload oss error by uuid:{}'.format(uuid))
             return
+        finally:
+            CRUDHandler.get_qrcode.execute(buffers=qr_code, md_username=md_username)
 
-        return oss_path, qrcode_rsp, self.deviceId, uuid
-
+    """use MsgReq"""
     def check_qrcode_login(self, qrcode_rsp, device_id, md_username):
         """
         检测扫描是否登陆
@@ -282,28 +255,28 @@ class WXBot(object):
 
         while qr_code['Status'] is not 2:
             # 构造扫描确认请求
-            check_qrcode_grpc_req = WechatMsg(
-                token=CONST_PROTOCOL_DICT['machine_code'],
-                version=CONST_PROTOCOL_DICT['version'],
-                timeStamp=get_time_stamp(),
-                iP=get_public_ip(),
-                baseMsg=BaseMsg(
-                    cmd=503,
-                    longHead=long_head,
-                    payloads=str(uuid),
-                    user=User(
-                        sessionKey=int_list_convert_to_byte_list(CONST_PROTOCOL_DICT['random_encry_key']),
-                        deviceId=self.deviceId,
-                        maxSyncKey=notify_key_str
-                    )
-                )
-            )
+            # check_qrcode_grpc_req = WechatMsg(
+            #     token=CONST_PROTOCOL_DICT['machine_code'],
+            #     version=CONST_PROTOCOL_DICT['version'],
+            #     timeStamp=get_time_stamp(),
+            #     iP=get_public_ip(),
+            #     baseMsg=BaseMsg(
+            #         cmd=503,
+            #         longHead=long_head,
+            #         payloads=str(uuid),
+            #         user=User(
+            #             sessionKey=int_list_convert_to_byte_list(CONST_PROTOCOL_DICT['random_encry_key']),
+            #             deviceId=self.deviceId,
+            #             maxSyncKey=notify_key_str
+            #         )
+            #     )
+            # )
+            check_qrcode_grpc_req = MsgReq(503, long_head=long_head, uuid=uuid, deviceId=self.deviceId, notify_key_str=notify_key_str)
 
             checkqrcode_grpc_rsp = grpc_client.send(check_qrcode_grpc_req)
             (grpc_buffers, seq) = grpc_utils.get_seq_buffer(checkqrcode_grpc_rsp)
             if not grpc_buffers:
                 logger.info("grpc返回错误")
-                # self.wechat_client.close_when_done()
                 return False
 
             buffers = self.wechat_client.sync_send_and_return(grpc_buffers)
@@ -311,9 +284,6 @@ class WXBot(object):
             if not buffers:
                 logger.info("check_qrcode_login buffers为空")
                 return False
-
-            # while not buffers:
-            #     buffers = self.wechat_client.get_packaget_by_seq(seq)
 
             if ord(buffers[16]) != 191:
                 logger.info("微信返回错误")
@@ -354,13 +324,9 @@ class WXBot(object):
                 self.wechat_client.close_when_done()
                 return False
 
+    """use MsgReq"""
     def confirm_qrcode_login(self, qr_code, md_username, keep_heart_beat):
         # 重置longHost
-
-        # bot_param = BotParam.objects.filter(username=qr_code['Username']).first()
-        # if bot_param and bot_param.long_host is not None and bot_param.long_host != "":
-        #     self.long_host = bot_param.long_host
-        #     self.wechat_client = WechatClient.WechatClient(self.long_host, 80, True)
 
         # 微信确认登陆模块
 
@@ -371,27 +337,13 @@ class WXBot(object):
         payLoadJson = "{\"Username\":\"" + qr_code['Username'] + "\",\"PassWord\":\"" + qr_code[
             'Password'] + "\",\"UUid\":\"" + UUid + "\",\"DeviceType\":\"" + DeviceType + "\"}"
 
-        qrcode_login_req = WechatMsg(
-            token=CONST_PROTOCOL_DICT['machine_code'],
-            version=CONST_PROTOCOL_DICT['version'],
-            timeStamp=get_time_stamp(),
-            iP=get_public_ip(),
-            baseMsg=BaseMsg(
-                cmd=1111,
-                user=User(
-                    sessionKey=int_list_convert_to_byte_list(CONST_PROTOCOL_DICT['random_encry_key']),
-                    deviceId=self.deviceId
-                ),
-                payloads=payLoadJson.encode('utf-8')
-            )
-        )
+        qrcode_login_req = MsgReq(1111, deviceId=self.deviceId, payLoadJson=payLoadJson)
 
         qrcode_login_rsp = grpc_client.send(qrcode_login_req)
         (grpc_buffers, seq) = grpc_utils.get_seq_buffer(qrcode_login_rsp)
 
         if not grpc_buffers:
             logger.info('%s: grpc返回错误' % qr_code['Nickname'])
-            # self.wechat_client.close_when_done()
             return False
 
         buffers = self.wechat_client.sync_send_and_return(grpc_buffers)
@@ -401,7 +353,6 @@ class WXBot(object):
 
         if ord(buffers[16]) != 191:
             logger.info("%s: 微信返回错误" % qr_code['Nickname'])
-            # self.wechat_client.close_when_done()
             return False
 
         qrcode_login_rsp.baseMsg.cmd = -1001
@@ -428,9 +379,6 @@ class WXBot(object):
             self.wechat_client.close_when_done()
             self.wechat_client = WechatClient.WechatClient(self.long_host, 80, True)
             return -301
-            # self.confirm_qrcode_login(qr_code, keep_heart_beat=False)
-            # 在user表写上gg，麻烦重新登录吧
-            # return False
         elif qrcode_login_rsp.baseMsg.ret == 0:
             # 返回0代表登陆成功
             logger.info('%s 登录成功' % qr_code['Nickname'])
@@ -441,7 +389,6 @@ class WXBot(object):
 
             try:
                 wxuser, created = WxUser.objects.get_or_create(uin=v_user.uin)
-                # print created
                 wxuser.update_wxuser_from_userobject(v_user)
                 wxuser.uuid = UUid
                 wxuser.device_type = DeviceType
@@ -450,7 +397,6 @@ class WXBot(object):
                 logger.error(e)
 
             red.set('v_user_' + str(v_user.userame), pickle.dumps(v_user))
-            # self.wechat_client.close_when_done()
             return True
         else:
             logger.info("qrcode_login_rsp.baseMsg.ret is {}".format(qrcode_login_rsp.baseMsg.ret))
@@ -547,7 +493,7 @@ class WXBot(object):
             # self.wechat_client.close_when_done()
             return False
 
-        buffers = self.wechat_client.sync_send_and_return(grpc_buffers, close_socket=new_socket)
+        buffers = self.wechat_client.sync_send_and_return(grpc_buffers, time_out=3, close_socket=new_socket)
 
         if not buffers:
             logger.info("%s: buffers为空" % v_user.nickname)
@@ -597,6 +543,7 @@ class WXBot(object):
             self.wechat_client.close_when_done()
             return False
 
+    """use MsgReq & CRUD"""
     def async_check(self, v_user, new_socket=True):
         """
         同步消息
@@ -607,30 +554,31 @@ class WXBot(object):
         """
         self.start_time = datetime.datetime.now()
         while True:
-            sync_req = WechatMsg(
-                token=CONST_PROTOCOL_DICT['machine_code'],
-                version=CONST_PROTOCOL_DICT['version'],
-                timeStamp=get_time_stamp(),
-                iP=get_public_ip(),
-                baseMsg=BaseMsg(
-                    cmd=138,
-                    user=v_user
-                )
-            )
+            # sync_req = WechatMsg(
+            #     token=CONST_PROTOCOL_DICT['machine_code'],
+            #     version=CONST_PROTOCOL_DICT['version'],
+            #     timeStamp=get_time_stamp(),
+            #     iP=get_public_ip(),
+            #     baseMsg=BaseMsg(
+            #         cmd=138,
+            #         user=v_user
+            #     )
+            # )
+            sync_req = MsgReq(138, v_user=v_user)
+
             sync_rsp = grpc_client.send(sync_req)
             (grpc_buffers, seq) = grpc_utils.get_seq_buffer(sync_rsp)
             if not grpc_buffers:
                 logger.info("%s: gprc返回错误" % v_user.nickname)
                 return False
 
-            buffers = self.wechat_client.sync_send_and_return(grpc_buffers)
-            # while not buffers:
-            #     logger.info("%s: buffers更新中..." % v_user.nickname)
-            #     buffers = self.wechat_client.get_packaget_by_seq(seq)
+            buffers = self.wechat_client.sync_send_and_return(grpc_buffers, time_out=2 )
+
             if not buffers:
                 logger.info("%s: buffers为空" % v_user.nickname)
                 return False
 
+            # 尝试重新登录
             if ord(buffers[16]) != 191:
                 try:
                     ret = read_int(buffers, 18)
@@ -658,6 +606,7 @@ class WXBot(object):
                 except Exception as e:
                     logging.error(e)
                     return
+            # 正常处理消息
             else:
                 logger.info("%s: 同步资料中" % v_user.nickname)
                 sync_rsp.baseMsg.cmd = -138
@@ -673,22 +622,14 @@ class WXBot(object):
                 if msg_list is not None:
                     for msg_dict in msg_list:
                         # 如果群进行改名，会进到这个循环，导致contact中存储了群的信息
+                        # 更新联系人
                         if msg_dict['MsgType'] == 2 and '@chatroom' not in msg_dict['UserName']:
-                            try:
-                                contact, created = Contact.objects.get_or_create(username=msg_dict['UserName'])
-                                # print "新增", msg_dict['UserName']
-                                contact.save()
-                                if created:
-                                    wx_user = WxUser.objects.get(username=v_user.userame)
-                                    contact.wx_user.add(wx_user.id)
-                                    contact.update_from_mydict(msg_dict)
-                                    contact.save()
-                            except Exception as e:
-                                logger.error(e)
+
+                            CRUDHandler.async_check.handle_contact(msg_dict, v_user=v_user)
+
+                        # 更新群相关内容
                         elif msg_dict.get('Status') is not None:
-                            # # 测试来自指定用户的语音， testing
-                            # if msg_dict['MsgType'] == 34 and msg_dict['FromUserName'] == 'hiddensorrow':
-                            #     VoiceDeque.put_voice(msg_dict['ImgBuf'])
+                            # 判断是否签到消息
                             try:
                                 # 消息
                                 data = action_rule.filter_keyword_rule(v_user.nickname, v_user.userame, msg_dict)
@@ -704,15 +645,16 @@ class WXBot(object):
                             # 如果有好友发送消息，则进行存储
 
                             # 拉取群信息
-                            chatroom_name = ''
-                            chatroom_owner = ''
-
-                            if '@chatroom' in msg_dict['FromUserName']:
-                                chatroom_name = msg_dict['FromUserName']
-                                chatroom_owner = msg_dict['ToUserName']
-
-                            if '@chatroom' in msg_dict['ToUserName']:
-                                chatroom_name = msg_dict['ToUserName']
+                            # chatroom_name = ''
+                            # chatroom_owner = ''
+                            #
+                            # if '@chatroom' in msg_dict['FromUserName']:
+                            #     chatroom_name = msg_dict['FromUserName']
+                            #     chatroom_owner = msg_dict['ToUserName']
+                            #
+                            # if '@chatroom' in msg_dict['ToUserName']:
+                            #     chatroom_name = msg_dict['ToUserName']
+                            chatroom_name, chatroom_owner = CRUDHandler.async_check.get_chatroom_name_and_owner(msg_dict)
 
                             if chatroom_name:
                                 try:
@@ -736,18 +678,19 @@ class WXBot(object):
                                                 self.send_invited_message(msg_dict, v_user)
                                 except Exception as e:
                                     logger.error(e)
+                                finally:
                                     connection.close()
-                            try:
-                                message, created = Message.objects.get_or_create(msg_id=msg_dict['MsgId'])
-                                message.update_from_msg_dict(msg_dict)
-                                message.save()
-                            except Exception as e:
-                                logger.error(e)
-                                connection.close()
+                            # try:
+                            #     message, created = Message.objects.get_or_create(msg_id=msg_dict['MsgId'])
+                            #     message.update_from_msg_dict(msg_dict)
+                            #     message.save()
+                            # except Exception as e:
+                            #     logger.error(e)
+
+                            CRUDHandler.async_check.handle_msg(msg_dict)
                         else:
                             print(msg_dict)
                 else:
-                    # self.inviting = False
                     logger.info("%s: 同步资料完成" % v_user.nickname)
                     return True
 
@@ -907,27 +850,24 @@ class WXBot(object):
         if bot_param:
             self.long_host = bot_param.long_host
             self.wechat_client = WechatClient.WechatClient(self.long_host, 80, True)
-        payLoadJson = "{\"ToUserName\":\"" + user_name + "\",\"Content\":\"" + content + "\",\"Type\":0,\"MsgSource\":\"" + at_user_id + "\"}"
-        send_text_req = WechatMsg(
-            token=CONST_PROTOCOL_DICT['machine_code'],
-            version=CONST_PROTOCOL_DICT['version'],
-            timeStamp=get_time_stamp(),
-            iP=get_public_ip(),
-            baseMsg=BaseMsg(
-                cmd=522,
-                user=v_user,
-                payloads=payLoadJson.encode('utf-8')
-            )
-        )
-        # import binascii
-        # print binascii.b2a_hex(v_user.sessionKey)
+        payLoadJson = "{\"ToUserName\":\"" + user_name + "\",\"Content\":\"" + content + "\",\"Type\":0,\"MsgSource\":\"" + at_user_id + "\"}".encode('utf-8')
+        # send_text_req = WechatMsg(
+        #     token=CONST_PROTOCOL_DICT['machine_code'],
+        #     version=CONST_PROTOCOL_DICT['version'],
+        #     timeStamp=get_time_stamp(),
+        #     iP=get_public_ip(),
+        #     baseMsg=BaseMsg(
+        #         cmd=522,
+        #         user=v_user,
+        #         payloads=payLoadJson.encode('utf-8')
+        #     )
+        # )
+        send_text_req = MsgReq(522, v_user=v_user, payLoadJson=payLoadJson)
         send_text_rsp = grpc_client.send(send_text_req)
 
         (grpc_buffers, seq) = grpc_utils.get_seq_buffer(send_text_rsp)
         if not grpc_buffers:
             logger.info("%s: grpc返回错误" % v_user.nickname)
-            # self.wechat_client.close_when_done()
-            # return False
 
         buffers = self.wechat_client.sync_send_and_return(grpc_buffers)
 
@@ -935,15 +875,8 @@ class WXBot(object):
             logger.info("%s: buffers为空" % v_user.nickname)
             self.wechat_client.close_when_done()
             return False
-
-        # while not buffers:
-        #     buffers = self.wechat_client.get_packaget_by_seq(seq)
-
         if ord(buffers[16]) != 191:
             logger.info("%s: 微信返回错误" % v_user.nickname)
-            # self.wechat_client.close_when_done()
-            # return False
-
         else:
             logger.info('{0} 向 {1} 发送文字信息:成功'.format(v_user.nickname, user_name, content))
         self.wechat_client.close_when_done()
@@ -1012,6 +945,8 @@ class WXBot(object):
         self.wechat_client.close_when_done()
         return
 
+    """use MsgReq & Modify & CRUD
+    GOOD"""
     def send_img_msg(self, user_name, v_user, url):
         """
         btn_SendMsgimg_Click
@@ -1023,11 +958,14 @@ class WXBot(object):
         if bot_param:
             self.long_host = bot_param.long_host
             self.wechat_client = WechatClientTest(self.long_host, 80, True)
-
+            if not self.wechat_client.be_init:
+                return False
+        connection.close()
         try:
             data = urllib2.urlopen(url).read()
         except BaseException:
             self.wechat_client.close_when_done()
+            return False
 
         import random
         random_str = str(random.randint(0, 999))
@@ -1080,9 +1018,6 @@ class WXBot(object):
             }
             pay_load_json = json.dumps(payLoadJson)
 
-            # print("Send Img Block {}".format(count))
-            # print("start_pos is {}".format(start_pos))
-            # print("data_total_length is {}".format(data_total_length))
             img_msg_req = MsgReq(110, v_user=v_user, pay_load_json=pay_load_json)
 
             img_msg_rsp = grpc_client.send(img_msg_req)
@@ -1090,24 +1025,7 @@ class WXBot(object):
 
             if not grpc_buffers:
                 logger.info("%s: grpc返回错误" % v_user.nickname)
-                # self.wechat_client.close_when_done()
-                # return False
 
-            #===================
-            # adam :2017.12.11
-            # buffers = self.wechat_client.sync_send_and_return(grpc_buffers, time_out=3)
-
-            # if not buffers:
-            #     logger.info("%s: buffers为空" % v_user.nickname)
-            # # while not buffers:
-            # #     buffers = self.wechat_client.get_packaget_by_seq(seq)
-            #
-            # if ord(buffers[16]) != 191:
-            #     logger.info("%s: 微信返回错误" % v_user.nickname)
-            #     logger.info("%s: 图片发送失败" % v_user.nickname)
-            #     # self.wechat_client.close_when_done()
-            #     # return False
-            # else:
             # 传入func_name供回调
             func_name = sys._getframe().f_code.co_name
             self.wechat_client.asyn_send(grpc_buffers, {"nickname": v_user.nickname, "send_num": send_num, 'func': func_name})
@@ -1227,20 +1145,12 @@ class WXBot(object):
         bot_param = BotParam.objects.filter(username=v_user.userame).first()
         if bot_param:
             self.short_host = bot_param.short_host
-        pay_load_json = "{\"Chatroom\":\"" + room_id + "\"}"
-        get_room_detail_req = WechatMsg(
-            token=CONST_PROTOCOL_DICT['machine_code'],
-            version=CONST_PROTOCOL_DICT['version'],
-            timeStamp=get_time_stamp(),
-            iP=get_public_ip(),
-            baseMsg=BaseMsg(
-                cmd=551,
-                user=v_user,
-                payloads=pay_load_json.encode('utf-8')
-            )
-        )
+        payLoadJson = "{\"Chatroom\":\"" + room_id + "\"}".encode('utf-8')
+
+        get_room_detail_req = MsgReq(551, v_user=v_user, payLoadJson=payLoadJson)
+
         get_room_detail_rsp = grpc_client.send(get_room_detail_req)
-        # (buffers, seq) = grpc_utils.get_seq_buffer(get_room_detail_rsp)
+
         body = get_room_detail_rsp.baseMsg.payloads
 
         buffers = requests.post("http://" + self.short_host + get_room_detail_rsp.baseMsg.cmdUrl, body)
@@ -1317,17 +1227,8 @@ class WXBot(object):
         wx_id_list = ','.join(wx_id_list) if not isinstance(wx_id_list, str) else wx_id_list
         payLoadJson = "{\"UserNameList\":\"" + wx_id_list + "\"}"
 
-        contacts_req = WechatMsg(
-            token=CONST_PROTOCOL_DICT['machine_code'],
-            version=CONST_PROTOCOL_DICT['version'],
-            timeStamp=get_time_stamp(),
-            iP=get_public_ip(),
-            baseMsg=BaseMsg(
-                cmd=182,
-                user=v_user,
-                payloads=payLoadJson.encode('utf-8')
-            )
-        )
+        contacts_req = MsgReq(182, v_user=v_user, payLoadJson=payLoadJson)
+
         get_contacts_rsp = grpc_client.send(contacts_req)
         (grpc_buffers, seq) = grpc_utils.get_seq_buffer(get_contacts_rsp)
         if not grpc_buffers:
@@ -1720,11 +1621,9 @@ class WXBot(object):
             if url:
                 print url
                 try:
-                    # self.inviting = True
                     requests.post(url)
                 except BaseException:
                     pass
-                # time.sleep(2)
                 logger.info("%s: 邀请进群成功！" % v_user.nickname)
 
     def GetA8Key(self, v_user, data):
