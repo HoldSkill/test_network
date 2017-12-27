@@ -32,12 +32,13 @@ class TestSendGroupMsgView(View):
     def post(self, request):
         req_dict = json.loads(request.body)
         data = req_dict["data"]
-        for i in range(1, 100):
+        for i in range(1, 10):
             logger.warning("开启第{}个线程".format(i))
             t = threading.Thread(target=sendMsg, args=(wx_id, chatroom_id, data))
             t.start()
             # TODO：主线程需要阻塞，全部的线程才会开始发送，不然只会有少量的线程运行，其余线程在启动后就不知道去哪儿了
             time.sleep(1)
+        # sendMsg(wx_id, chatroom_id, data)
         return HttpResponse(json.dumps({"ret": 1}))
 
 

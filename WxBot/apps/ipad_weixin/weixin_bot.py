@@ -976,8 +976,11 @@ class WXBot(object):
         if len(data) > max_length:
             img = Image.open(BytesIO(data))
             img_buffer = BytesIO()
-            quality_rate = 40
-            img.save(img_buffer, 'JPEG', quality=quality_rate)
+            quality_rate = 60
+            if "jpeg" in url or "jpg" in url:
+                img.save(img_buffer, 'JPEG', quality=quality_rate)
+            elif "png" in url:
+                img.save(img_buffer, 'PNG', quality=quality_rate)
             data = img_buffer.getvalue()
 
         # 如果压缩后的图片仍然非常大，超过25次，则放弃改图片的发送
