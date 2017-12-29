@@ -69,7 +69,7 @@ class WechatClient(asynchat.async_chat, object):
     def asyn_send(self, data):
         self.push(data)
 
-    def sync_send_and_return(self, data, time_out=1, close_socket=False):
+    def sync_send_and_return(self, data, time_out=3, close_socket=False):
         self.asyn_send(data)
         seq = common_utils.read_int(data, 12)
         start_time = datetime.now()
