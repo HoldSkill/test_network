@@ -64,6 +64,8 @@ def filter_sign_in_keyword(wx_id, msg_dict):
                 request_url = url + sign_rule_db.red_packet_id
                 json_data = json.dumps(data)
                 response = requests.post(request_url, data=json_data)
+                if not response.content:
+                    return
                 body = json.loads(response.content)
 
                 reaction_list = body['reaction_list']
