@@ -9,7 +9,7 @@ if sys.getdefaultencoding() != defaultencoding:
 import os
 
 import sys
-b_path = os.path.abspath("..")
+b_path = os.path.abspath("../..")
 # b_path = '/home/may/work/taobaoke_weixinbot/WxBot'
 sys.path.append(b_path)
 
@@ -632,7 +632,7 @@ class WXBot(object):
                             # 判断是否签到消息
                             try:
                                 # 消息
-                                data = action_rule.filter_keyword_rule(v_user.nickname, v_user.userame, msg_dict)
+                                data = action_rule.filter_keyword_rule(v_user, msg_dict)
                                 if data:
                                     data['v_user'] = v_user
                                     data['username'] = v_user.userame
