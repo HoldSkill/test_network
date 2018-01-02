@@ -17,29 +17,41 @@ logger = logging.getLogger('django_views')
 
 
 wx_id = "wxid_cegmcl4xhn5w22"
-chatroom_id = "6610815091@chatroom"
+chatroom_id = ["5761280027@chatroom", "6947816994@chatroom"]
 data = ["http://md-oss.di25.cn/03a7d2d6-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
         "http://md-oss.di25.cn/03a7d2d7-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
         "http://md-oss.di25.cn/03a7d2d8-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
         "http://md-oss.di25.cn/03a7d2d9-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
         "http://md-oss.di25.cn/03a7d2da-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
-        "这个药真的是太好用了，我在家里撒上药两天屋里的蟑螂死了一片，现在基本都没有蟑螂了，我真的不是托儿，确实好用。"
         ]
 
+import thread
 
 class TestSendGroupMsgView(View):
     @csrf_exempt
     def post(self, request):
         req_dict = json.loads(request.body)
         data = req_dict["data"]
-        for i in range(1, 10):
-            logger.warning("开启第{}个线程".format(i))
-            t = threading.Thread(target=sendMsg, args=(wx_id, chatroom_id, data))
-            t.start()
-            # TODO：主线程需要阻塞，全部的线程才会开始发送，不然只会有少量的线程运行，其余线程在启动后就不知道去哪儿了
-            time.sleep(1)
-        # sendMsg(wx_id, chatroom_id, data)
+        for chatroom in chatroom_id:
+            # thread.start_new_thread(sendMsg, (wx_id, chatroom, data))
+            time.sleep(10)
+            logger.info("超时测试")
+
+            # t = threading.Thread(target=sendMsg, args=(wx_id, chatroom, data))
+            # t.start()
         return HttpResponse(json.dumps({"ret": 1}))
+
+
+
+
+        # for i in range(1, 10):
+        #     logger.warning("开启第{}个线程".format(i))
+        #     t = threading.Thread(target=sendMsg, args=(wx_id, chatroom_id, data))
+        #     t.start()
+        #     # TODO：主线程需要阻塞，全部的线程才会开始发送，不然只会有少量的线程运行，其余线程在启动后就不知道去哪儿了
+        #     time.sleep(1)
+        # # sendMsg(wx_id, chatroom_id, data)
+        # return HttpResponse(json.dumps({"ret": 1}))
 
 
 class TestSendGroupMessageVIew(View):
@@ -62,4 +74,5 @@ class TestSendGroupMessageVIew(View):
             wx_id = wxuser.username
             chatroom_id = chatroom.username
             thread.start_new_thread(sendMsg, (wx_id, chatroom_id, data))
+            time.sleep(10)
         return HttpResponse(json.dumps({"ret": 1, "data": "处理完成"}))
