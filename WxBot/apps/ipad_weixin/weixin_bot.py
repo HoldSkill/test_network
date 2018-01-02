@@ -1039,6 +1039,8 @@ class WXBot(object):
             start_pos = start_pos + count
             send_num += 1
             time.sleep(1)
+
+        logger.info('{0} 向 {1} 发送图片:成功'.format(v_user.nickname, user_name))
         self.wechat_client.close_when_done()
         connection.close()
         return True
