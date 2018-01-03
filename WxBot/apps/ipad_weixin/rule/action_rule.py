@@ -14,15 +14,19 @@ import urllib
 import requests
 import json
 import re
+import threading
 
 import logging
 logger = logging.getLogger('weixin_bot')
 
 
-def filter_keyword_rule(nickname, wx_id, msg_dict):
+def filter_keyword_rule(v_user, msg_dict):
     data = get_Msgdata(msg_dict)
+    wx_id = v_user.userame
+    nickname = v_user.nickname
     if data:
         return data
+
     keyword = find_buy_start(msg_dict['Content'])
 
     if (keyword and keyword is not '') or ("我剁手都要" in msg_dict['Content']) or("天猫APP" in msg_dict["Content"]):
@@ -73,7 +77,9 @@ def filter_keyword_rule(nickname, wx_id, msg_dict):
                 data = response_dict["data"]
 
                 from ipad_weixin.send_msg_type import sendMsg
-                sendMsg(wx_id, gid, data, at_user_id)
+                sending_thread = threading.Thread(target=sendMsg, args=(wx_id, gid, data, at_user_id))
+                sending_thread.setDaemon(True)
+                sending_thread.start()
             except Exception as e:
                 logger.error(e)
                 logger.error("WxUser: {0}, 群: {1}, 商品搜索出现异常".format(nickname, chatroom.nickname))

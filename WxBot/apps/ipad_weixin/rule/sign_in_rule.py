@@ -12,6 +12,7 @@ import re
 from ipad_weixin.send_msg_type import sendMsg
 import requests
 import json
+import threading
 
 import logging
 logger = logging.getLogger("weixin_bot")
@@ -76,14 +77,18 @@ def filter_sign_in_keyword(wx_id, msg_dict):
                         send_text = "@" + speaker_name + '\\n' + text
 
                         # 发送文字消息
-                        sendMsg(wx_id, from_user_id, [send_text], speaker_id)
+                        text_thread = threading.Thread(target=sendMsg, args=(wx_id, from_user_id, [send_text], speaker_id))
+                        text_thread.setDaemon(True)
+                        text_thread.start()
 
                     elif reaction['type'] == 'img':
 
                         img_url = reaction['content']
                         if img_url:
                             # 发送图片信息
-                            sendMsg(wx_id, from_user_id, [img_url])
+                            img_thread = threading.Thread(target=sendMsg, args=[wx_id, from_user_id, [img_url]])
+                            img_thread.setDaemon(True)
+                            img_thread.start()
         except Exception as e:
             logger.error(e)
             logger.error("WxUser: {0}, 群 {1} 签到发生异常, 原因: {2}".format(wx_id, chatroom.nickname, e.message))

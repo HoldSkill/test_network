@@ -9,7 +9,7 @@ if sys.getdefaultencoding() != defaultencoding:
 import os
 
 import sys
-b_path = os.path.abspath("..")
+b_path = os.path.abspath("../..")
 # b_path = '/home/may/work/taobaoke_weixinbot/WxBot'
 sys.path.append(b_path)
 
@@ -632,7 +632,7 @@ class WXBot(object):
                             # 判断是否签到消息
                             try:
                                 # 消息
-                                data = action_rule.filter_keyword_rule(v_user.nickname, v_user.userame, msg_dict)
+                                data = action_rule.filter_keyword_rule(v_user, msg_dict)
                                 if data:
                                     data['v_user'] = v_user
                                     data['username'] = v_user.userame
@@ -667,7 +667,9 @@ class WXBot(object):
                                     # 群与wxuser没有建立联系，群昵称为空，群成员为空
                                     if not ChatRoom.objects.filter(wxuser__username=v_user.userame, username=chatroom_name) \
                                             or not chatroom.nickname or not chatroom.chatroommember_set.all():
-                                        self.get_contact(v_user, chatroom_name.encode('utf-8'))
+                                        contact_thread = threading.Thread(target=self.get_contact, args=(v_user, chatroom_name.encode('utf-8'),))
+                                        contact_thread.setDaemon(True)
+                                        contact_thread.start()
                                     else:
                                         # 该群存在, 则可能是更改群名称、拉/踢人等。
                                         if msg_dict['Status'] == 4:
@@ -1039,6 +1041,8 @@ class WXBot(object):
             start_pos = start_pos + count
             send_num += 1
             time.sleep(1)
+
+        logger.info('{0} 向 {1} 发送图片:成功'.format(v_user.nickname, user_name))
         self.wechat_client.close_when_done()
         connection.close()
         return True
