@@ -310,19 +310,30 @@ class Message(models.Model):
 
 
 class SignInRule(models.Model):
-    keyword = models.CharField(max_length=100)
-    red_packet_id = models.CharField(max_length=100)
+    keyword = models.CharField(max_length=100, unique=True)
     created = models.DateTimeField(auto_now=True)
 
-    chatroom = models.ManyToManyField(ChatRoom)
+    chatroom = models.ManyToManyField(
+        ChatRoom,
+        through="Rule_Chatroom",
+        through_fields=("sign_in_rule", "chatroom")
+    )
 
     def __unicode__(self):
         return self.keyword
 
-
     class Meta:
         verbose_name = u"签到规则"
         verbose_name_plural = verbose_name
+
+
+class Rule_Chatroom(models.Model):
+    chatroom = models.OneToOneField(ChatRoom)
+    sign_in_rule = models.ForeignKey(SignInRule)
+    red_packet_id = models.CharField(max_length=50)
+
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
 
 
 class PushRecord(models.Model):

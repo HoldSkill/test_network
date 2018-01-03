@@ -120,7 +120,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'OPTIONS': {'charset': 'utf8mb4'},
-        'NAME': 'weixinbot',
+        'NAME': 'wxbot',
         'USER': 'root',
         'PASSWORD': 'keyerror',
     }

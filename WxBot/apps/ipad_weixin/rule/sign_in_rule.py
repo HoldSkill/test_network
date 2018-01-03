@@ -6,7 +6,7 @@ os.environ.update({"DJANGO_SETTINGS_MODULE": "WxBot.settings"})
 django.setup()
 
 from django.db import connection
-from ipad_weixin.models import ChatRoom, SignInRule, ChatroomMember
+from ipad_weixin.models import ChatRoom, SignInRule, ChatroomMember, Rule_Chatroom
 import time
 import re
 from ipad_weixin.send_msg_type import sendMsg
@@ -45,9 +45,10 @@ def filter_sign_in_keyword(wx_id, msg_dict):
         logger.info("WxUser: {0}, 群 {1} 进入签到".format(wx_id, chatroom.nickname))
         # 判断该群的签到规则是否为keyword
         try:
-            sign_rule_db = SignInRule.objects.filter(keyword=content, chatroom=chatroom).first()
+            rule_chatroom = Rule_Chatroom.objects.filter(sign_in_rule__keyword=content, chatroom=chatroom).first()
+            # sign_rule_db = SignInRule.objects.filter(keyword=content, chatroom=chatroom).first()
 
-            if sign_rule_db:
+            if rule_chatroom:
                 speaker = ChatroomMember.objects.filter(username=speaker_id).first()
                 speaker_name = speaker.nickname
                 data = {
@@ -61,7 +62,7 @@ def filter_sign_in_keyword(wx_id, msg_dict):
 
                 # url = 'http://s-poc-02.qunzhu666.com/365/api/clockin/'
                 url = 'http://s-poc-02.qunzhu666.com/sign/'
-                request_url = url + sign_rule_db.red_packet_id
+                request_url = url + rule_chatroom.red_packet_id
                 json_data = json.dumps(data)
                 response = requests.post(request_url, data=json_data)
                 if not response.content:

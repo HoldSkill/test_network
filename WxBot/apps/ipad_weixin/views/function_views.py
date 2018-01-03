@@ -3,7 +3,11 @@ from __future__ import unicode_literals
 
 import json
 import time
+import pickle
+import thread
+import random
 import datetime
+
 from django.http import HttpResponse
 from django.views.generic.base import View
 from django.views.decorators.csrf import csrf_exempt
@@ -11,17 +15,14 @@ from django.db import connection
 from django.utils import timezone
 from django.contrib.auth.models import User
 
+from ipad_weixin.serializer import RuleChatRoomSerializer
 from ipad_weixin.weixin_bot import WXBot
-from ipad_weixin.models import Qrcode, WxUser, ChatRoom, SignInRule, PushRecord, PlatformInformation, Wxuser_Chatroom, \
-    ForbiddenChatRoom
-from ipad_weixin.heartbeat_manager import HeartBeatManager
+from ipad_weixin.models import WxUser, ChatRoom, SignInRule, PlatformInformation, Wxuser_Chatroom, \
+    ForbiddenChatRoom, Rule_Chatroom
 from ipad_weixin.send_msg_type import sendMsg
 from ipad_weixin.utils.oss_utils import beary_chat
 from ipad_weixin.settings import red
-import pickle
 
-import thread
-import random
 
 import logging
 logger = logging.getLogger('django_views')
@@ -188,7 +189,7 @@ class DefineSignRule(View):
             "platform_id":
         }
     接口： http://s-prod-04.qunzhu666.com:10024/api/robot/define_sign_rule/
-    本地： localhost:10024/robot/define_sign_rule/
+    本地： localhost:10024/api/robot/define_sign_rule/
     """
     @csrf_exempt
     def post(self, request):
@@ -204,16 +205,71 @@ class DefineSignRule(View):
         chatroom_list = ChatRoom.objects.filter(wxuser__username=wx_user.username, wxuser_chatroom__is_send=True)
         if not chatroom_list:
             return HttpResponse(json.dumps({"ret": 0, "reason": "生产群为空"}))
-        sign_rule = SignInRule()
-        sign_rule.keyword = keyword
-        sign_rule.red_packet_id = red_packet_id
-        sign_rule.save()
+        sign_rule, created = SignInRule.objects.get_or_create(keyword=keyword)
 
+        sign_rule_list = []
         for chatroom in chatroom_list:
-            sign_rule.chatroom.add(chatroom.id)
-            sign_rule.save()
+            try:
+                defaults = {
+                    "chatroom": chatroom,
+                    "sign_in_rule": sign_rule,
+                    "red_packet_id": red_packet_id
+                }
+                sign_in_rule, created = Rule_Chatroom.objects.update_or_create(chatroom=chatroom, defaults=defaults)
+                sign_rule_list.append(sign_in_rule)
+            except Exception as e:
+                logger.error(e)
+                return HttpResponse(json.dumps({"ret": 0, "reason": "添加或更新失败"}))
+        serializer = RuleChatRoomSerializer(sign_rule_list, many=True)
+        return HttpResponse(json.dumps({"result": serializer.data}))
 
-        return HttpResponse(json.dumps({"ret": 1, "reason": "添加红包口令成功"}))
+    def get(self, request):
+        md_username = request.GET.get("md_username", "")
+        if not md_username:
+            return HttpResponse(json.dumps({"ret": 0, "reason": "username为空"}), status=400)
+        sign_in_rule = SignInRule.objects.filter(chatroom__wxuser__user__username=md_username)
+        sign_in_rule_db = Rule_Chatroom.objects.filter(chatroom__wxuser__user__username=md_username)
+        serializer = RuleChatRoomSerializer(sign_in_rule_db, many=True)
+        return HttpResponse(json.dumps({"result": serializer.data}))
+
+
+class UpdateOrDeleteSignRule(View):
+    """
+    接口： /api/robot/chatroom_rule/
+
+    """
+    @csrf_exempt
+    def post(self, request):
+        req_dict = json.loads(request.body)
+        md_username = req_dict['md_username']
+        platform_id = req_dict['platform_id']
+        keyword = req_dict.get("keyword", "")
+        chatroom_username = req_dict.get("chatroom_username", "")
+
+        if not md_username:
+            return HttpResponse(json.dumps({"ret": 0, "reason": "username为空"}), status=400)
+
+        if keyword and chatroom_username:
+            # 创建或更新某个群的签到口令
+            try:
+                sign_rule, created = SignInRule.objects.get_or_create(keyword=keyword)
+                red_packet_id = PlatformInformation.objects.get(platform_id=platform_id).red_packet_id
+                defaults = {
+                    "sign_in_rule": sign_rule,
+                    "chatroom": ChatRoom.objects.get(username=chatroom_username),
+                    "red_packet_id": red_packet_id
+                }
+                rule_chatroom, created = Rule_Chatroom.objects.update_or_create(chatroom__username=chatroom_username,
+                                                                   defaults=defaults)
+            except Exception as e:
+                logger.error(e)
+                return HttpResponse(json.dumps({"ret": 0, "reason": "chatroom_username不合法"}), status=400)
+        elif chatroom_username:
+            # 删除某个群的签到口令
+            rule_chatroom = Rule_Chatroom.objects.filter(chatroom__username=chatroom_username).delete()
+        sign_in_rule_db = Rule_Chatroom.objects.filter(chatroom__wxuser__user__username=md_username)
+        serializer = RuleChatRoomSerializer(sign_in_rule_db, many=True)
+        return HttpResponse(json.dumps({"result": serializer.data}))
 
 
 class SendGroupMessageVIew(View):
