@@ -667,7 +667,9 @@ class WXBot(object):
                                     # 群与wxuser没有建立联系，群昵称为空，群成员为空
                                     if not ChatRoom.objects.filter(wxuser__username=v_user.userame, username=chatroom_name) \
                                             or not chatroom.nickname or not chatroom.chatroommember_set.all():
-                                        self.get_contact(v_user, chatroom_name.encode('utf-8'))
+                                        contact_thread = threading.Thread(target=self.get_contact, args=(v_user, chatroom_name.encode('utf-8'),))
+                                        contact_thread.setDaemon(True)
+                                        contact_thread.start()
                                     else:
                                         # 该群存在, 则可能是更改群名称、拉/踢人等。
                                         if msg_dict['Status'] == 4:
