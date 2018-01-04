@@ -198,11 +198,18 @@ class DefineSignRule(View):
         md_username = req_dict['md_username']
         platform_id = req_dict['platform_id']
 
-        red_packet_id = PlatformInformation.objects.get(platform_id=platform_id, is_customer_server=False).red_packet_id
-        wx_user = WxUser.objects.filter(user__username=md_username).first()
+        try:
+            red_packet_id = PlatformInformation.objects.get(platform_id=platform_id, is_customer_server=False).red_packet_id
+            wxuser_list = WxUser.objects.filter(user__username=md_username)
 
-        # 只有在生产群才能够添加签到规则
-        chatroom_list = ChatRoom.objects.filter(wxuser__username=wx_user.username, wxuser_chatroom__is_send=True)
+            # 只有在生产群才能够添加签到规则
+            chatroom_list_ = []
+            for wxuser in wxuser_list:
+                chatroom = ChatRoom.objects.filter(wxuser=wxuser, wxuser_chatroom__is_send=True)
+                chatroom_list_ += chatroom
+            chatroom_list = list(set(chatroom_list_))
+        except Exception as e:
+            return HttpResponse(json.dumps({"ret": 0, "reason": "未登录机器人"}))
         if not chatroom_list:
             return HttpResponse(json.dumps({"ret": 0, "reason": "生产群为空"}))
         sign_rule, created = SignInRule.objects.get_or_create(keyword=keyword)
