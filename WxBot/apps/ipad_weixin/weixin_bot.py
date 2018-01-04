@@ -876,6 +876,7 @@ class WXBot(object):
         if not buffers:
             logger.info("%s: buffers为空" % v_user.nickname)
             self.wechat_client.close_when_done()
+            logger.info("发送文字内容: {}".format(content))
             return False
         if ord(buffers[16]) != 191:
             logger.info("%s: 微信返回错误" % v_user.nickname)
