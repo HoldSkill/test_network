@@ -15,34 +15,23 @@ import logging
 logger = logging.getLogger('django_views')
 
 
-
 wx_id = "wxid_cegmcl4xhn5w22"
 chatroom_id = ["5761280027@chatroom", "6947816994@chatroom"]
-data = ["http://md-oss.di25.cn/03a7d2d6-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
-        "http://md-oss.di25.cn/03a7d2d7-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
-        "http://md-oss.di25.cn/03a7d2d8-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
-        "http://md-oss.di25.cn/03a7d2d9-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
-        "http://md-oss.di25.cn/03a7d2da-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
-        ]
+
 
 import thread
+
 
 class TestSendGroupMsgView(View):
     @csrf_exempt
     def post(self, request):
-        req_dict = json.loads(request.body)
-        data = req_dict["data"]
+        # req_dict = json.loads(request.body)
+        # data = req_dict["data"]
         for chatroom in chatroom_id:
-            # thread.start_new_thread(sendMsg, (wx_id, chatroom, data))
-            time.sleep(10)
-            logger.info("超时测试")
-
+            thread.start_new_thread(sendMsg, (wx_id, chatroom, data))
             # t = threading.Thread(target=sendMsg, args=(wx_id, chatroom, data))
             # t.start()
         return HttpResponse(json.dumps({"ret": 1}))
-
-
-
 
         # for i in range(1, 10):
         #     logger.warning("开启第{}个线程".format(i))
@@ -76,3 +65,65 @@ class TestSendGroupMessageVIew(View):
             thread.start_new_thread(sendMsg, (wx_id, chatroom_id, data))
             time.sleep(10)
         return HttpResponse(json.dumps({"ret": 1, "data": "处理完成"}))
+
+data = ["http://md-oss.di25.cn/03a7d2d6-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d7-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d8-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d9-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2da-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        # "5张",
+        "http://md-oss.di25.cn/03a7d2d6-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d7-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d8-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d9-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2da-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        # "10张",
+        "http://md-oss.di25.cn/03a7d2d6-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d7-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d8-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d9-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2da-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        # "15张",
+        "http://md-oss.di25.cn/03a7d2d6-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d7-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d8-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d9-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2da-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        # "20张",
+        "http://md-oss.di25.cn/03a7d2d6-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d7-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d8-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d9-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2da-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        # "25张",
+        "http://md-oss.di25.cn/03a7d2d6-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d7-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d8-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d9-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2da-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        # "30张",
+        "http://md-oss.di25.cn/03a7d2d6-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d7-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d8-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d9-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2da-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        # "35张",
+        "http://md-oss.di25.cn/03a7d2d6-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d7-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d8-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d9-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2da-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        # "40张",
+        "http://md-oss.di25.cn/03a7d2d6-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d7-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d8-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d9-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2da-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        # "45张",
+        "http://md-oss.di25.cn/03a7d2d6-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d7-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d8-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2d9-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        "http://md-oss.di25.cn/03a7d2da-e5fa-11e7-9455-1c1b0d3e23eb.jpeg?x-oss-process=image/quality,Q_80",
+        # "50张",
+        ]
