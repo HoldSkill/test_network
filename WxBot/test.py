@@ -37,8 +37,8 @@ def trans_xml_to_dict(xml):
 b = """
     <sysmsg type="delchatroommember">
         <delchatroommember>
-            <plain><![CDATA["陌"通过扫描你分享的二维码加入群聊  ]]></plain>
-            <text><![CDATA["陌"通过扫描你分享的二维码加入群聊  ]]></text>
+            <plain><![CDATA[" 陌"通过扫描"哈哈哈哈"分享的二维码加入群聊  ]]></plain>
+            <text><![CDATA[" 陌"通过扫描"哈哈哈哈"分享的二维码加入群聊  ]]></text>
             <link>
                 <scene>qrcode</scene>
                 <text><![CDATA[  撤销]]></text>
@@ -52,7 +52,7 @@ b = """
 """
 
 
-pattern = '.*"(.*?)".*'
+pattern = '.*"(.*?)"通过扫描'
 result = re.match(pattern, b, re.S)
 if result:
     print result.group(1)

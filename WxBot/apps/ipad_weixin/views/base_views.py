@@ -78,7 +78,7 @@ class HostList(View):
                 for chatroom in chatroom_list:
                     robot_chatroom_list.append({"nickname": chatroom.nickname,
                                                 "username": chatroom.username})
-                    wxuser_chatroom = Wxuser_Chatroom.objects.get(wxuser=wxuser, chatroom=chatroom)
+                    wxuser_chatroom = Wxuser_Chatroom.objects.filter(wxuser=wxuser, chatroom=chatroom).first()
                     if wxuser_chatroom.is_send:
                         production_chatroom_list.append({"nickname": chatroom.nickname,
                                                          "username": chatroom.username})

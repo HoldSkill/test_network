@@ -679,14 +679,14 @@ class WXBot(object):
                                                     Wxuser_Chatroom.objects.get(chatroom=chatroom, wxuser__username=v_user.userame).is_send:
                                                 self.send_invited_message(msg_dict, v_user)
                                             # TODO：临时添加，后删除该规则
-                                            if u"扫描你分享的二维码" in msg_dict['Content'] and "MMT一起赚" in chatroom.nickname:
-                                                pattern = '.*"(.*?)".*'
+                                            if u"分享的二维码" in msg_dict['Content'] and "MMT一起赚" in chatroom.nickname:
+                                                pattern = '.*"(.*?)"通过扫描'
                                                 content = msg_dict['Content'].encode("utf-8")
                                                 nicakname_str = re.match(pattern, content, re.S)
                                                 if nicakname_str:
                                                     invited_nickname = nicakname_str.group(1)
                                                     chatroom_member = ChatroomMember.objects.filter(
-                                                        nickname=invited_nickname).first()
+                                                        nickname__icontains=invited_nickname.decode("utf-8").strip()).first()
                                                     invited_member_id = chatroom_member.username
 
                                                     message = "@" + invited_nickname + "\\n 欢迎加入我们“MMT一起赚”大家庭！这里为您送上一份新年见面礼，现金红包拿不停～ 新年迎新活动开启咯～ 1. 每天上午十点准时签到，输入正确的口令即可成功签到，每日前十名可领取现金红包～ 口令将在前一天公布 2. 上午下午各有两次发红包的活动，请随时关注群消息。千万不要错过喔～ 3. 每天免单活动推不停～"
